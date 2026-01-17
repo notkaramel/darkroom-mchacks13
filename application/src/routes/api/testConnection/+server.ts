@@ -1,16 +1,16 @@
-import { log } from 'console';
-import mongoose from 'mongoose';
-import { MONGO_USERNAME, MONGO_PASSWORD } from '$env/static/private';
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { connectDB } from '$lib/database';
 
-const uri = `mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@darkroom-cluster.ffcj3de.mongodb.net/?appName=darkroom-cluster`;
-
-export const GET = async () => {
-	log(MONGO_USERNAME, MONGO_PASSWORD);
-	log(uri);
-    try {
-        await mongoose.connect(uri);
-        return new Response('Connected to MongoDB Atlas', { status: 200 });
-    } catch (error) {
-        return new Response('Error connecting to MongoDB', { status: 500 });
-    }
-}
+export const GET: RequestHandler = async () => {
+	try {
+		await connectDB();
+		return json({ ok: true });
+	} catch (err) {
+		console.error('DB connection failed:', err);
+		return json(
+			{ ok: false, name: (err as any)?.name, message: (err as any)?.message },
+			{ status: 500 }
+		);
+	}
+};

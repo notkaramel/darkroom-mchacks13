@@ -1,0 +1,1 @@
+<!-- Picture View at the center of the screen -->

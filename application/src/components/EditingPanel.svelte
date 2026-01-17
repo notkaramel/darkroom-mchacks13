@@ -1,0 +1,1 @@
+<!-- Editing Panel on the right side of the screen -->

@@ -1,0 +1,1 @@
+<!-- Selection Panel on the left side of the screen -->

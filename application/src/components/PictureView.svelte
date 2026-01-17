@@ -3,13 +3,17 @@
     let { image = null, filters } = $props();
 
     // Derived rune to construct the CSS filter string dynamically based on filter values
+    // Mapping relative values (0 default) to CSS percentages (100% default)
     let filterString = $derived(`
-        brightness(${filters.brightness}%)
-        contrast(${filters.contrast}%)
-        saturate(${filters.saturation}%)
-        blur(${filters.blur}px)
-        grayscale(${filters.grayscale}%)
-        sepia(${filters.sepia}%)
+        brightness(${100 + filters.basic.brightness}%)
+        contrast(${100 + filters.basic.contrast}%)
+        saturate(${100 + filters.color.saturation}%)
+    `);
+
+    // Derived rune for CSS transform properties
+    let transformString = $derived(`
+        rotate(${filters.transform.rotate}deg)
+        perspective(${filters.transform.perspective}px)
     `);
 </script>
 
@@ -21,6 +25,7 @@
             alt="Editing Preview" 
             class="max-h-[90%] max-w-[90%] object-contain shadow-2xl transition-all duration-200"
             style:filter={filterString}
+            style:transform={transformString}
         />
     {:else}
         <!-- Placeholder State when no image is selected -->

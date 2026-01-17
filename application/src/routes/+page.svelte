@@ -1,8 +1,9 @@
 <script lang="ts">
     // Import the three main panels of the application
-	import SelectionPanel from '../components/SelectionPanel.svelte';
-    import PictureView from '../components/PictureView.svelte';
-    import EditingPanel from '../components/EditingPanel.svelte';
+	import SelectionPanel from 'components/SelectionPanel.svelte';
+    import PictureView from 'components/PictureView.svelte';
+    import EditingPanel from 'components/EditingPanel.svelte';
+    import Section from 'components/editing/Section.svelte';
 
     // State for the currently selected image to be displayed in the center view
     let currentImage = $state<string | null>(null);

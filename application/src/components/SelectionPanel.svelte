@@ -70,7 +70,7 @@
             <!-- Image Grid -->
             <div class="flex flex-col gap-3 w-full items-center">
                 {#each images as img, i}
-                    <div class="relative group flex-shrink-0">
+                    <div class="relative group shrink-0">
                         <button 
                             class="h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none block"
                             class:border-white={img === selectedImage}

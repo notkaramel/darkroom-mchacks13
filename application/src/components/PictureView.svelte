@@ -104,10 +104,15 @@
     $effect(() => {
         if (!isInitialized || !colorFilter) return;
         
+        // Access filter values to ensure reactivity tracking
+        const brightness = filters.basic.brightness;
+        const contrast = filters.basic.contrast;
+        const saturation = filters.color.saturation;
+        
         colorFilter.reset();
-        colorFilter.brightness(filters.brightness / 200, true);
-        colorFilter.contrast(filters.contrast / 100, true);
-        colorFilter.hue(filters.grayscale * 360 / 100, true);
+        colorFilter.brightness(brightness / 200, true);
+        colorFilter.contrast(contrast / 100, true);
+        colorFilter.saturate(saturation / 100, true);
     });
 
     // Update mask when split position changes

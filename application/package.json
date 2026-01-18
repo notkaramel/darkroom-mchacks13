@@ -37,6 +37,7 @@
 	},
 	"dependencies": {
 		"mongodb": "^7.0.0",
-		"mongoose": "^9.1.4"
+		"mongoose": "^9.1.4",
+		"pixi.js": "^8.15.0"
 	}
 }

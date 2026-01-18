@@ -1,22 +1,55 @@
 <script lang="ts">
+    import Slider from 'components/editing/Slider.svelte';
+    import Section from 'components/editing/Section.svelte';
+
     // Bindable prop to allow two-way state update with the parent
     let { filters = $bindable() } = $props();
+
+    type HslColorKey = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'magenta';
+
+    // State for currently selected HSL color channel
+    let activeHslColor = $state<HslColorKey>('red');
+
+    // State for collapsible sections
+    let expanded = $state({
+        basic: true,
+        color: true,
+        hsl: true
+    });
+
+    const hslColors = [
+        { name: 'red', color: 'bg-red-500' },
+        { name: 'orange', color: 'bg-orange-500' },
+        { name: 'yellow', color: 'bg-yellow-400' },
+        { name: 'green', color: 'bg-green-500' },
+        { name: 'cyan', color: 'bg-cyan-400' },
+        { name: 'blue', color: 'bg-blue-500' },
+        { name: 'purple', color: 'bg-purple-500' },
+        { name: 'magenta', color: 'bg-pink-500' }
+    ] as const;
 
     // Function to reset all filters to their default neutral values
     function reset() {
         filters = {
-            brightness: 100,
-            contrast: 100,
-            saturation: 100,
-            grayscale: 0,
-            sepia: 0,
-            blur: 0,
-            hueRotate: 0
+            basic: { brightness: 0, contrast: 0, highlight: 0, shadow: 0 },
+            color: { temperature: 0, tint: 0, vibrance: 0, saturation: 0 },
+            hsl: {
+                red: { hue: 0, saturation: 0, luminance: 0 },
+                orange: { hue: 0, saturation: 0, luminance: 0 },
+                yellow: { hue: 0, saturation: 0, luminance: 0 },
+                green: { hue: 0, saturation: 0, luminance: 0 },
+                cyan: { hue: 0, saturation: 0, luminance: 0 },
+                blue: { hue: 0, saturation: 0, luminance: 0 },
+                purple: { hue: 0, saturation: 0, luminance: 0 },
+                magenta: { hue: 0, saturation: 0, luminance: 0 }
+            },
+            lens_corrections: { distortion: 0, chromatic_aberration: 0, vignetting: 0 },
+            transform: { rotate: 0, vertical: 0, horizontal: 0, perspective: 0 }
         };
     }
 </script>
 
-<div class="flex h-full flex-col overflow-y-auto bg-zinc-900/50 p-6 backdrop-blur-xl">
+<div class="flex h-full flex-col overflow-y-auto bg-zinc-900/50 p-6 backdrop-blur-xl custom-scrollbar">
     <!-- Header with Reset Button -->
     <div class="mb-8 flex items-center justify-between">
         <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Adjustments</h2>
@@ -29,99 +62,40 @@
     </div>
 
     <!-- Sliders Container -->
-    <div class="space-y-8">
-        <!-- Brightness Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Brightness</span>
-                <span class="text-zinc-500 font-mono">{filters.brightness}%</span>
-            </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="200" 
-                bind:value={filters.brightness} 
-            />
-        </div>
+    <div class="space-y-6 pb-10">
+        <!-- Basic Section -->
+        <Section title="Basic" bind:isExpanded={expanded.basic}>
+            <Slider label="Brightness" bind:value={filters.basic.brightness} />
+            <Slider label="Contrast" bind:value={filters.basic.contrast} />
+            <Slider label="Highlights" bind:value={filters.basic.highlight} />
+            <Slider label="Shadows" bind:value={filters.basic.shadow} />
+        </Section>
 
-        <!-- Contrast Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Contrast</span>
-                <span class="text-zinc-500 font-mono">{filters.contrast}%</span>
-            </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="200" 
-                bind:value={filters.contrast} 
-            />
-        </div>
+        <!-- Color Section -->
+        <Section title="Color" bind:isExpanded={expanded.color}>
+            <Slider label="Temp" bind:value={filters.color.temperature} />
+            <Slider label="Tint" bind:value={filters.color.tint} />
+            <Slider label="Vibrance" bind:value={filters.color.vibrance} />
+            <Slider label="Saturation" bind:value={filters.color.saturation} />
+        </Section>
 
-        <!-- Saturation Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Saturation</span>
-                <span class="text-zinc-500 font-mono">{filters.saturation}%</span>
+        <!-- HSL Section -->
+        <Section title="HSL" bind:isExpanded={expanded.hsl}>
+            <!-- Color Selector -->
+            <div class="mb-6 flex justify-between px-1">
+                {#each hslColors as {name, color}}
+                    <button 
+                        class={`h-5 w-5 rounded-full ring-2 ring-offset-2 ring-offset-zinc-900 focus:outline-none transition-all ${color} ${activeHslColor === name ? 'ring-white scale-110' : 'ring-transparent opacity-80 hover:opacity-100 hover:scale-110'}`}
+                        onclick={(e) => { e.stopPropagation(); activeHslColor = name; }}
+                        title={name.charAt(0).toUpperCase() + name.slice(1)}
+                    ></button>
+                {/each}
             </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="200" 
-                bind:value={filters.saturation} 
-            />
-        </div>
 
-        <!-- Divider -->
-        <div class="my-4 h-px w-full bg-zinc-800"></div>
-
-        <!-- Blur Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Blur</span>
-                <span class="text-zinc-500 font-mono">{filters.blur}px</span>
-            </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="20" 
-                step="0.1" 
-                bind:value={filters.blur} 
-            />
-        </div>
-
-        <!-- Grayscale Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Grayscale</span>
-                <span class="text-zinc-500 font-mono">{filters.grayscale}%</span>
-            </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="100" 
-                bind:value={filters.grayscale} 
-            />
-        </div>
-
-        <!-- Sepia Slider -->
-        <div class="group">
-            <div class="mb-3 flex justify-between text-xs font-medium">
-                <span class="text-zinc-300">Sepia</span>
-                <span class="text-zinc-500 font-mono">{filters.sepia}%</span>
-            </div>
-            <input 
-                type="range" 
-                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-white hover:accent-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/20" 
-                min="0" 
-                max="100" 
-                bind:value={filters.sepia} 
-            />
-        </div>
+            <!-- HSL Sliders for Active Color -->
+            <Slider label="Hue" bind:value={filters.hsl[activeHslColor].hue} />
+            <Slider label="Saturation" bind:value={filters.hsl[activeHslColor].saturation} />
+            <Slider label="Luminance" bind:value={filters.hsl[activeHslColor].luminance} />
+        </Section>
     </div>
 </div>

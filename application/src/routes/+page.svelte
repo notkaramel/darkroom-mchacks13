@@ -1,4 +1,5 @@
 <script lang="ts">
+<<<<<<< HEAD
     // Import the three main panels of the application
 	import SelectionPanel from 'components/SelectionPanel.svelte';
     import PictureView from 'components/PictureView.svelte';
@@ -120,3 +121,9 @@
         </div>
     </div>
 </div>
+=======
+  import PictureView from "../components/PictureView.svelte";
+</script>
+
+<PictureView />
+>>>>>>> b6c6a12 (pixi maybe working)

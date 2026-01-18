@@ -65,7 +65,7 @@
     <div class="space-y-6 pb-10">
         <!-- Basic Section -->
         <Section title="Basic" bind:isExpanded={expanded.basic}>
-            <Slider label="Brightness" bind:value={filters.basic.brightness} />
+            <Slider label="Brightness" bind:value={filters.basic.brightness} gradient="bg-gradient-to-r from-zinc-950 to-white" />
             <Slider label="Contrast" bind:value={filters.basic.contrast} />
             <Slider label="Highlights" bind:value={filters.basic.highlight} />
             <Slider label="Shadows" bind:value={filters.basic.shadow} />
@@ -73,8 +73,8 @@
 
         <!-- Color Section -->
         <Section title="Color" bind:isExpanded={expanded.color}>
-            <Slider label="Temp" bind:value={filters.color.temperature} />
-            <Slider label="Tint" bind:value={filters.color.tint} />
+            <Slider label="Temp" bind:value={filters.color.temperature} gradient="bg-gradient-to-r from-blue-500 to-orange-500" />
+            <Slider label="Tint" bind:value={filters.color.tint} gradient="bg-gradient-to-r from-green-500 to-fuchsia-500" />
             <Slider label="Vibrance" bind:value={filters.color.vibrance} />
             <Slider label="Saturation" bind:value={filters.color.saturation} />
         </Section>

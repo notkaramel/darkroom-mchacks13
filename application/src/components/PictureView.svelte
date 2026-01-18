@@ -2,7 +2,7 @@
 	import * as PIXI from 'pixi.js';
 	import { PhotoEditFilter } from '$lib/PhotoEditFilter';
 
-	let { image = null, filters, filteredSprite=$bindable() } = $props();
+	let { image = null, filters, filteredSprite = $bindable(), pixiRenderer = $bindable(), pixiApp = $bindable() } = $props();
 
 	let canvasContainer = $state<HTMLDivElement>();
 	
@@ -78,6 +78,10 @@
 				app.stage.addChild(maskGraphics);
 				app.stage.addChild(filteredSprite);
 
+				// Expose renderer and app for histogram
+				pixiRenderer = app.renderer;
+				pixiApp = app;
+
 				isInitialized = true;
 				updateMask();
 			} catch (error) {
@@ -103,23 +107,31 @@
 
 	// Handle canvas resize when sidebars collapse/expand
 	$effect(() => {
-		if (!canvasContainer || !app || !app.canvas) return;
+		if (!canvasContainer) return;
+		if (!app) return;
 
 		const resizeObserver = new ResizeObserver(() => {
-			if (!app || !app.canvas || !canvasContainer) return;
+			if (!app || !canvasContainer) return;
 
-			const containerWidth = canvasContainer.clientWidth;
-			const containerHeight = canvasContainer.clientHeight;
-			
-			// Calculate scale to fit container
-			const scaleX = containerWidth / app.canvas.width;
-			const scaleY = containerHeight / app.canvas.height;
-			const scale = Math.min(scaleX, scaleY);
+			try {
+				const containerWidth = canvasContainer.clientWidth;
+				const containerHeight = canvasContainer.clientHeight;
+				
+				const canvas = app.canvas;
+				if (!canvas) return;
+				
+				// Calculate scale to fit container
+				const scaleX = containerWidth / canvas.width;
+				const scaleY = containerHeight / canvas.height;
+				const scale = Math.min(scaleX, scaleY);
 
-			// Apply CSS transform for smooth scaling
-			app.canvas.style.transform = `scale(${scale})`;
-			app.canvas.style.transformOrigin = 'center center';
-			app.canvas.style.transition = 'transform 300ms ease-in-out';
+				// Apply CSS transform for smooth scaling
+				canvas.style.transform = `scale(${scale})`;
+				canvas.style.transformOrigin = 'center center';
+				canvas.style.transition = 'transform 300ms ease-in-out';
+			} catch (error) {
+				// Silently ignore if app or canvas is no longer available
+			}
 		});
 
 		resizeObserver.observe(canvasContainer);

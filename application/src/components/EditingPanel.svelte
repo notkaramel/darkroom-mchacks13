@@ -4,7 +4,13 @@
 	import Histogram from 'components/editing/Histogram.svelte';
 
 	// Bindable prop to allow two-way state update with the parent
-	let { filters = $bindable(), image = null } = $props();
+	let { 
+		filters = $bindable(), 
+		image = null
+	}: { 
+		filters: any, 
+		image: string | null
+	} = $props();
 
 	// Determine if sliders should be locked (no image loaded)
 	const isLocked = $derived(!image);
@@ -72,7 +78,7 @@
 	<!-- Histogram -->
 	{#if !isLocked}
 		<div class="mb-6">
-			<Histogram imageData={image} />
+			<Histogram imageUrl={image} {filters} />
 		</div>
 	{/if}
 

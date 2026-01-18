@@ -2,7 +2,7 @@
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
-	let { onSelect, onDelete = (img: string) => {}, selectedImage = null } = $props();
+	let { onSelect, onDelete = (img: string) => {}, onExport = () => {}, onOpenAI = () => {}, selectedImage = null } = $props();
 
 	// State to store the list of uploaded image strings (Data URLs)
 	let images = $state<string[]>([]);
@@ -66,7 +66,7 @@
 	>
 		<button
 			onclick={handleUpload}
-			class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-md transition-colors hover:bg-zinc-200"
+			class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-md transition-colors hover:bg-zinc-300"
 			title="Upload Photo"
 		>
 			<svg
@@ -84,6 +84,8 @@
 				/>
 			</svg>
 		</button>
+
+
 	</div>
 
 	<!-- Gallery Grid Section (Single Column) -->
@@ -127,10 +129,65 @@
 								/>
 							</svg>
 						</button>
+						
+
+						
+
 					</div>
 				{/each}
 			</div>
 		{/if}
+	</div>
+
+
+	<!-- Ai Agent and Export Button (Bottom) -->
+	<div class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm">
+		<button
+			onclick={onOpenAI}
+			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 text-white shadow-md transition-all hover:from-purple-500 hover:to-blue-500 active:scale-95"
+			title="AI Agent"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-bot"
+			>
+				<path d="M12 8V4H8" />
+				<rect width="16" height="12" x="4" y="8" rx="2" />
+				<path d="M2 14h2" />
+				<path d="M20 14h2" />
+				<path d="M15 13v2" />
+				<path d="M9 13v2" />
+			</svg>
+			<span class="text-sm font-medium">AI Agent</span>
+		</button>
+		<button
+			onclick={onExport}
+			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300"
+			title="Export"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-arrow-right-from-line-icon lucide-arrow-right-from-line"
+				><path d="M3 5v14" /><path d="M21 12H7" /><path d="m15 18 6-6-6-6" />
+			</svg>
+			<span class="text-sm font-medium">Export</span>
+		</button>
 	</div>
 
 	<!-- Hidden File Input for handling uploads -->

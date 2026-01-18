@@ -2,12 +2,15 @@ import adapter from '@sveltejs/adapter-auto';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
-const config = {
+	const config = {
 	kit: {
 		adapter: adapter(),
 		alias: {
 			// So you can import with `from 'components/...'`
 			components: 'src/components/'
+		},
+		csrf: {
+			trustedOrigins: ['https://darkroom.notkaramel.dev']
 		}
 	},
 	// Consult https://svelte.dev/docs/kit/integrations

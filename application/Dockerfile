@@ -8,6 +8,6 @@ RUN bun install
 
 COPY . .
 
-RUN bun run build
+RUN ORIGIN="https://darkroom.notkaramel.dev" bun run build
 
 CMD ["bun", "run", "preview", "--host", "0.0.0.0"]

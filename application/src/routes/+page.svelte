@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Import the three main panels of the application
+	import * as PIXI from 'pixi.js';
 	import SelectionPanel from 'components/SelectionPanel.svelte';
 	import PictureView from 'components/PictureView.svelte';
 	import EditingPanel from 'components/EditingPanel.svelte';
@@ -15,9 +16,17 @@
 	// State object holding all filter values (grouped by category as per Preset schema)
 	let filters = $state(getDefaultFilters());
 
+	let filteredSprite = $state<PIXI.Sprite | null>(null);
+
 	// Handler to update the current image when a user selects one from the SelectionPanel
 	function handleSelectImage(img: string) {
-		currentImage = img;
+		if (currentImage === img){
+			currentImage = null;
+			filters = getDefaultFilters();
+			return;
+		} else {
+			currentImage = img;
+		}
 		
 		// Load saved filters for this image, or use defaults
 		const savedFilters = loadFilters(img);
@@ -53,6 +62,7 @@
 			}, 500); // Save 500ms after last change
 		}
 	});
+	
 </script>
 
 <!-- Main Application Layout: Flex Container -->
@@ -68,6 +78,7 @@
 				onSelect={handleSelectImage}
 				onDelete={handleDeleteImage}
 				selectedImage={currentImage}
+				
 			/>
 		</div>
 	</div>
@@ -98,7 +109,7 @@
 		</button>
 
 		<!-- Picture View Component -->
-		<PictureView image={currentImage} {filters} />
+		<PictureView image={currentImage} {filters} bind:filteredSprite />
 
 		<!-- Floating Toggle Button for Editing (Right) -->
 		<button
@@ -130,7 +141,7 @@
 		style:width={isEditingOpen ? '320px' : '0px'}
 	>
 		<div class="h-full w-[320px]">
-			<EditingPanel bind:filters image={currentImage} />
+			<EditingPanel bind:filters image={filteredSprite} />
 		</div>
 	</div>
 </div>

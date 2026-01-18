@@ -2,12 +2,12 @@
 	import * as PIXI from 'pixi.js';
 	import { PhotoEditFilter } from '$lib/PhotoEditFilter';
 
-	let { image = null, filters } = $props();
+	let { image = null, filters, filteredSprite=$bindable() } = $props();
 
 	let canvasContainer = $state<HTMLDivElement>();
+	
 	let app: PIXI.Application | null = null;
 	let originalSprite: PIXI.Sprite | null = null;
-	let filteredSprite: PIXI.Sprite | null = null;
 
 	let photoEditFilter: PhotoEditFilter | null = null;
 	let maskGraphics: PIXI.Graphics | null = null;
@@ -172,6 +172,17 @@
 		photoEditFilter.setBlueHSL(hsl.blue.hue / 200, hsl.blue.saturation / 100, hsl.blue.luminance / 333);
 		photoEditFilter.setPurpleHSL(hsl.purple.hue / 200, hsl.purple.saturation / 100, hsl.purple.luminance / 333);
 		photoEditFilter.setMagentaHSL(hsl.magenta.hue / 200, hsl.magenta.saturation / 100, hsl.magenta.luminance / 333);
+
+		// Lens Corrections: -100 to +100 -> -1 to +1
+		photoEditFilter.distortion = filters.lens_corrections.distortion / 100;
+		photoEditFilter.chromaticAberration = filters.lens_corrections.chromatic_aberration / 100;
+		photoEditFilter.vignetting = filters.lens_corrections.vignetting / 100;
+
+		// Transform
+		photoEditFilter.rotation = filters.transform.rotate; // Direct degrees
+		photoEditFilter.vertical = filters.transform.vertical; // -100 to +100
+		photoEditFilter.horizontal = filters.transform.horizontal; // -100 to +100
+		photoEditFilter.perspective = filters.transform.perspective / 100; // -100 to +100 -> -1 to +1
 	});
 
 	// Update mask when split position changes
@@ -202,7 +213,7 @@
             class="absolute top-4 left-4 z-10 rounded-full bg-zinc-900/80 px-4 py-2 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95 border border-white/10"
             onclick={toggleSplit}
         >
-            {splitPosition === 0 ? 'Show Filtered' : 'Show Original'}
+            {splitPosition === 0 ? 'Filtered' : 'Original'}
         </button>
         
         <div class="absolute flex items-center justify-center bottom-4 left-1/2 -translate-x-1/2 z-10 bg-zinc-900/80 backdrop-blur-md rounded-full p-6 border border-white/10">

@@ -16,25 +16,25 @@
 		try {
 			// Get texture from sprite
 			const texture = sprite.texture;
-			
+
 			// Extract pixel data from texture
 			const pixels = texture.source.resource as HTMLImageElement | HTMLCanvasElement;
-			
+
 			// Create temporary canvas to read pixel data
 			const tempCanvas = document.createElement('canvas');
 			tempCanvas.width = texture.width;
 			tempCanvas.height = texture.height;
 			const ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
-			
+
 			if (!ctx) return;
-			
+
 			// Draw texture to temp canvas
 			ctx.drawImage(pixels, 0, 0);
-			
+
 			// Get pixel data
 			const imgData = ctx.getImageData(0, 0, texture.width, texture.height);
 			const pixelData = imgData.data;
-			
+
 			// Reset histogram arrays
 			const red = new Array(256).fill(0);
 			const green = new Array(256).fill(0);

@@ -4,24 +4,25 @@
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
-	let { onSelect, onDelete = (img: string) => {}, onOpenAI = () => {}, selectedImage = null } = $props();
+	let {
+		onSelect,
+		onDelete = (img: string) => {},
+		onOpenAI = () => {},
+		selectedImage = null
+	} = $props();
 	import { exportMultipleImages } from '$lib/export';
 
 	type ImageItem = { photoId: string; previewURL: string };
 
 	// State to store the list of uploaded image strings (Data URLs)
-<<<<<<< HEAD
-	let images = $state<ImageItem[]>([]);
-=======
 	let images = $state<string[]>([]);
-	
+
 	// State to store images selected for export
 	let selectedForExport = $state<Set<string>>(new Set());
-	
+
 	// Export progress state
 	let isExporting = $state(false);
 	let exportProgress = $state({ current: 0, total: 0 });
->>>>>>> minh/webgl
 
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
@@ -41,11 +42,8 @@
 			const file = target.files[0];
 			const reader = new FileReader();
 			// Read file as Data URL to display immediately
-<<<<<<< HEAD
 			reader.onload = async (e) => {
 				if (!e.target?.result) return;
-
-				const previewURL = e.target.result as string;
 
 				try {
 					const formData = new FormData();
@@ -64,27 +62,12 @@
 
 					const { photoId } = await res.json();
 
-					const item: ImageItem = { photoId, previewURL };
-					images = [...images, item];
-
+					images = [...images, photoId];
 					onSelect(photoId);
 				} catch (err) {
 					console.error('Upload error', err);
-=======
-			reader.onload = (e) => {
-				if (e.target?.result) {
-					const result = e.target.result as string;
-					
-					// Check if image already exists before adding
-				if (!images.includes(result)) {
-					// Add new image to the list
-					images = [...images, result];
-					// Automatically open the newly uploaded image in edit mode
-					onSelect(result);
->>>>>>> minh/webgl
 				}
-			}
-		};
+			};
 			reader.readAsDataURL(file);
 
 			// Reset the file input to allow selecting the same file again
@@ -149,18 +132,14 @@
 			exportProgress = { current: 0, total: 0 };
 		}
 	}
-	
+
 	// Function to remove an image from the list
 	function removeImage(e: MouseEvent, index: number) {
 		e.stopPropagation(); // Prevent triggering selection
 		const removedImage = images[index]; // Capture image before removing
 		images = images.filter((_, i) => i !== index);
-<<<<<<< HEAD
-		onDelete(removedImage.photoId); // Notify parent
-=======
 		selectedForExport.delete(removedImage); // Remove from export selection
 		onDelete(removedImage); // Notify parent
->>>>>>> minh/webgl
 	}
 </script>
 
@@ -189,8 +168,6 @@
 				/>
 			</svg>
 		</button>
-
-
 	</div>
 
 	<!-- Gallery Grid Section (Single Column) -->
@@ -207,16 +184,6 @@
 					<div class="group relative shrink-0">
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
-<<<<<<< HEAD
-							class:border-white={img.photoId === selectedImage}
-							class:ring-1={img.photoId === selectedImage}
-							class:ring-white={img.photoId === selectedImage}
-							class:border-zinc-800={img.photoId !== selectedImage}
-							class:hover:border-white={img.photoId !== selectedImage}
-							onclick={() => onSelect(img.photoId)}
-						>
-							<img src={img.previewURL} alt="Thumbnail" class="h-full w-full object-cover" />
-=======
 							class:border-white={img === selectedImage}
 							class:ring-2={img === selectedImage || selectedForExport.has(img)}
 							class:ring-white={img === selectedImage}
@@ -227,16 +194,26 @@
 							onclick={() => handleImageClick(img)}
 						>
 							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
-							
+
 							<!-- Selection Checkmark -->
 							{#if selectedForExport.has(img)}
-								<div class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg">
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 text-white">
-										<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+								<div
+									class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="h-3 w-3 text-white"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 								</div>
 							{/if}
->>>>>>> minh/webgl
 						</button>
 
 						<!-- Delete Button (Visible on Hover) -->
@@ -262,9 +239,10 @@
 		{/if}
 	</div>
 
-
 	<!-- Ai Agent and Export Button (Bottom) -->
-	<div class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm">
+	<div
+		class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm"
+	>
 		<!-- <button
 			onclick={onOpenAI}
 			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 text-white shadow-md transition-all hover:from-purple-500 hover:to-blue-500 active:scale-95"
@@ -293,17 +271,29 @@
 		</button> -->
 		<button
 			onclick={handleExport}
-			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
 			title="Export selected images"
 			disabled={selectedForExport.size === 0 || isExporting}
 		>
 			{#if isExporting}
 				<!-- Loading spinner -->
-				<svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-					<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+				<svg
+					class="h-4 w-4 animate-spin"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+				>
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+					></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
 				</svg>
-				<span class="text-sm font-medium">Exporting {exportProgress.current}/{exportProgress.total}</span>
+				<span class="text-sm font-medium"
+					>Exporting {exportProgress.current}/{exportProgress.total}</span
+				>
 			{:else}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -318,7 +308,9 @@
 					class="lucide lucide-arrow-right-from-line-icon lucide-arrow-right-from-line"
 					><path d="M3 5v14" /><path d="M21 12H7" /><path d="m15 18 6-6-6-6" />
 				</svg>
-				<span class="text-sm font-medium">Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span>
+				<span class="text-sm font-medium"
+					>Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span
+				>
 			{/if}
 		</button>
 	</div>

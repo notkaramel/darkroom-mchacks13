@@ -383,59 +383,59 @@ void main() {
 `;
 
 export class PhotoEditFilter extends Filter {
-    constructor() {
-        super({
-            glProgram: GlProgram.from({
-                vertex,
-                fragment,
-            }),
-            resources: {
-                photoEditUniforms: {
-                    uBrightness: { value: 0.0, type: 'f32' },
-                    uContrast: { value: 0.0, type: 'f32' },
-                    uHighlights: { value: 0.0, type: 'f32' },
-                    uShadows: { value: 0.0, type: 'f32' },
-                    uTemperature: { value: 0.0, type: 'f32' },
-                    uTint: { value: 0.0, type: 'f32' },
-                    uSaturation: { value: 0.0, type: 'f32' },
-                    uVibrance: { value: 0.0, type: 'f32' },
-                    uRedHue: { value: 0.0, type: 'f32' },
-                    uRedSat: { value: 0.0, type: 'f32' },
-                    uRedLum: { value: 0.0, type: 'f32' },
-                    uOrangeHue: { value: 0.0, type: 'f32' },
-                    uOrangeSat: { value: 0.0, type: 'f32' },
-                    uOrangeLum: { value: 0.0, type: 'f32' },
-                    uYellowHue: { value: 0.0, type: 'f32' },
-                    uYellowSat: { value: 0.0, type: 'f32' },
-                    uYellowLum: { value: 0.0, type: 'f32' },
-                    uGreenHue: { value: 0.0, type: 'f32' },
-                    uGreenSat: { value: 0.0, type: 'f32' },
-                    uGreenLum: { value: 0.0, type: 'f32' },
-                    uCyanHue: { value: 0.0, type: 'f32' },
-                    uCyanSat: { value: 0.0, type: 'f32' },
-                    uCyanLum: { value: 0.0, type: 'f32' },
-                    uBlueHue: { value: 0.0, type: 'f32' },
-                    uBlueSat: { value: 0.0, type: 'f32' },
-                    uBlueLum: { value: 0.0, type: 'f32' },
-                    uPurpleHue: { value: 0.0, type: 'f32' },
-                    uPurpleSat: { value: 0.0, type: 'f32' },
-                    uPurpleLum: { value: 0.0, type: 'f32' },
-                    uMagentaHue: { value: 0.0, type: 'f32' },
-                    uMagentaSat: { value: 0.0, type: 'f32' },
-                    uMagentaLum: { value: 0.0, type: 'f32' },
-                    // Lens corrections
-                    uDistortion: { value: 0.0, type: 'f32' },
-                    uChromaticAberration: { value: 0.0, type: 'f32' },
-                    uVignetting: { value: 0.0, type: 'f32' },
-                    // Transform
-                    uRotation: { value: 0.0, type: 'f32' },
-                    uVertical: { value: 0.0, type: 'f32' },
-                    uHorizontal: { value: 0.0, type: 'f32' },
-                    uPerspective: { value: 0.0, type: 'f32' }
-                }
-            }
-        });
-    }
+	constructor() {
+		super({
+			glProgram: GlProgram.from({
+				vertex,
+				fragment
+			}),
+			resources: {
+				photoEditUniforms: {
+					uBrightness: { value: 0.0, type: 'f32' },
+					uContrast: { value: 0.0, type: 'f32' },
+					uHighlights: { value: 0.0, type: 'f32' },
+					uShadows: { value: 0.0, type: 'f32' },
+					uTemperature: { value: 0.0, type: 'f32' },
+					uTint: { value: 0.0, type: 'f32' },
+					uSaturation: { value: 0.0, type: 'f32' },
+					uVibrance: { value: 0.0, type: 'f32' },
+					uRedHue: { value: 0.0, type: 'f32' },
+					uRedSat: { value: 0.0, type: 'f32' },
+					uRedLum: { value: 0.0, type: 'f32' },
+					uOrangeHue: { value: 0.0, type: 'f32' },
+					uOrangeSat: { value: 0.0, type: 'f32' },
+					uOrangeLum: { value: 0.0, type: 'f32' },
+					uYellowHue: { value: 0.0, type: 'f32' },
+					uYellowSat: { value: 0.0, type: 'f32' },
+					uYellowLum: { value: 0.0, type: 'f32' },
+					uGreenHue: { value: 0.0, type: 'f32' },
+					uGreenSat: { value: 0.0, type: 'f32' },
+					uGreenLum: { value: 0.0, type: 'f32' },
+					uCyanHue: { value: 0.0, type: 'f32' },
+					uCyanSat: { value: 0.0, type: 'f32' },
+					uCyanLum: { value: 0.0, type: 'f32' },
+					uBlueHue: { value: 0.0, type: 'f32' },
+					uBlueSat: { value: 0.0, type: 'f32' },
+					uBlueLum: { value: 0.0, type: 'f32' },
+					uPurpleHue: { value: 0.0, type: 'f32' },
+					uPurpleSat: { value: 0.0, type: 'f32' },
+					uPurpleLum: { value: 0.0, type: 'f32' },
+					uMagentaHue: { value: 0.0, type: 'f32' },
+					uMagentaSat: { value: 0.0, type: 'f32' },
+					uMagentaLum: { value: 0.0, type: 'f32' },
+					// Lens corrections
+					uDistortion: { value: 0.0, type: 'f32' },
+					uChromaticAberration: { value: 0.0, type: 'f32' },
+					uVignetting: { value: 0.0, type: 'f32' },
+					// Transform
+					uRotation: { value: 0.0, type: 'f32' },
+					uVertical: { value: 0.0, type: 'f32' },
+					uHorizontal: { value: 0.0, type: 'f32' },
+					uPerspective: { value: 0.0, type: 'f32' }
+				}
+			}
+		});
+	}
 
 	// Basic adjustments
 	get brightness(): number {
@@ -543,61 +543,61 @@ export class PhotoEditFilter extends Filter {
 		this.resources.photoEditUniforms.uniforms.uPurpleLum = lum;
 	}
 
-    // HSL Per-Color: Magenta
-    setMagentaHSL(hue: number, sat: number, lum: number) {
-        this.resources.photoEditUniforms.uniforms.uMagentaHue = hue;
-        this.resources.photoEditUniforms.uniforms.uMagentaSat = sat;
-        this.resources.photoEditUniforms.uniforms.uMagentaLum = lum;
-    }
+	// HSL Per-Color: Magenta
+	setMagentaHSL(hue: number, sat: number, lum: number) {
+		this.resources.photoEditUniforms.uniforms.uMagentaHue = hue;
+		this.resources.photoEditUniforms.uniforms.uMagentaSat = sat;
+		this.resources.photoEditUniforms.uniforms.uMagentaLum = lum;
+	}
 
-    // Lens Corrections
-    get distortion(): number {
-        return this.resources.photoEditUniforms.uniforms.uDistortion;
-    }
-    set distortion(value: number) {
-        this.resources.photoEditUniforms.uniforms.uDistortion = value;
-    }
+	// Lens Corrections
+	get distortion(): number {
+		return this.resources.photoEditUniforms.uniforms.uDistortion;
+	}
+	set distortion(value: number) {
+		this.resources.photoEditUniforms.uniforms.uDistortion = value;
+	}
 
-    get chromaticAberration(): number {
-        return this.resources.photoEditUniforms.uniforms.uChromaticAberration;
-    }
-    set chromaticAberration(value: number) {
-        this.resources.photoEditUniforms.uniforms.uChromaticAberration = value;
-    }
+	get chromaticAberration(): number {
+		return this.resources.photoEditUniforms.uniforms.uChromaticAberration;
+	}
+	set chromaticAberration(value: number) {
+		this.resources.photoEditUniforms.uniforms.uChromaticAberration = value;
+	}
 
-    get vignetting(): number {
-        return this.resources.photoEditUniforms.uniforms.uVignetting;
-    }
-    set vignetting(value: number) {
-        this.resources.photoEditUniforms.uniforms.uVignetting = value;
-    }
+	get vignetting(): number {
+		return this.resources.photoEditUniforms.uniforms.uVignetting;
+	}
+	set vignetting(value: number) {
+		this.resources.photoEditUniforms.uniforms.uVignetting = value;
+	}
 
-    // Transform
-    get rotation(): number {
-        return this.resources.photoEditUniforms.uniforms.uRotation;
-    }
-    set rotation(value: number) {
-        this.resources.photoEditUniforms.uniforms.uRotation = value;
-    }
+	// Transform
+	get rotation(): number {
+		return this.resources.photoEditUniforms.uniforms.uRotation;
+	}
+	set rotation(value: number) {
+		this.resources.photoEditUniforms.uniforms.uRotation = value;
+	}
 
-    get vertical(): number {
-        return this.resources.photoEditUniforms.uniforms.uVertical;
-    }
-    set vertical(value: number) {
-        this.resources.photoEditUniforms.uniforms.uVertical = value;
-    }
+	get vertical(): number {
+		return this.resources.photoEditUniforms.uniforms.uVertical;
+	}
+	set vertical(value: number) {
+		this.resources.photoEditUniforms.uniforms.uVertical = value;
+	}
 
-    get horizontal(): number {
-        return this.resources.photoEditUniforms.uniforms.uHorizontal;
-    }
-    set horizontal(value: number) {
-        this.resources.photoEditUniforms.uniforms.uHorizontal = value;
-    }
+	get horizontal(): number {
+		return this.resources.photoEditUniforms.uniforms.uHorizontal;
+	}
+	set horizontal(value: number) {
+		this.resources.photoEditUniforms.uniforms.uHorizontal = value;
+	}
 
-    get perspective(): number {
-        return this.resources.photoEditUniforms.uniforms.uPerspective;
-    }
-    set perspective(value: number) {
-        this.resources.photoEditUniforms.uniforms.uPerspective = value;
-    }
+	get perspective(): number {
+		return this.resources.photoEditUniforms.uniforms.uPerspective;
+	}
+	set perspective(value: number) {
+		this.resources.photoEditUniforms.uniforms.uPerspective = value;
+	}
 }

@@ -49,6 +49,24 @@
 	let splitPosition = $state(0);
 	let isInitialized = $state(false);
 
+	// State: Zoom level (1.0 = 100%, starts at fit-to-container scale)
+	let currentZoom = $state(1);
+	let baseScale = $state(1); // The initial scale to fit container
+	const MIN_ZOOM = 0.1;
+	const MAX_ZOOM = 10;
+	const ZOOM_SENSITIVITY = 0.1; // How fast zoom changes with scroll
+
+	// State: Pan offset (translation from center)
+	let panX = $state(0);
+	let panY = $state(0);
+	let centerX = $state(0);
+	let centerY = $state(0);
+
+	// State: Dragging state
+	let isDragging = $state(false);
+	let lastMouseX = 0;
+	let lastMouseY = 0;
+
 	/**
 	 * Initialize PIXI.js application and load photo
 	 */
@@ -128,29 +146,34 @@
 					return;
 				}
 
-				// Calculate scale to fit container
-				const scale = Math.min(
+				// Calculate scale to fit container (base scale)
+				baseScale = Math.min(
 					app.screen.width / loadedTexture.width,
 					app.screen.height / loadedTexture.height
 				);
 
-				const centerX = app.screen.width / 2;
-				const centerY = app.screen.height / 2;
+				// Store center positions
+				centerX = app.screen.width / 2;
+				centerY = app.screen.height / 2;
+
+				// Reset pan offset when new image loads
+				panX = 0;
+				panY = 0;
 
 				// Create original sprite (left side - unfiltered)
 				originalSprite = new PIXI.Sprite(loadedTexture);
 				originalSprite.anchor.set(0.5);
-				originalSprite.scale.set(scale);
-				originalSprite.x = centerX;
-				originalSprite.y = centerY;
+				originalSprite.scale.set(baseScale * currentZoom);
+				originalSprite.x = centerX + panX;
+				originalSprite.y = centerY + panY;
 				app.stage.addChild(originalSprite);
 
 				// Create filtered sprite (right side - filtered)
 				filteredSprite = new PIXI.Sprite(loadedTexture);
 				filteredSprite.anchor.set(0.5);
-				filteredSprite.scale.set(scale);
-				filteredSprite.x = centerX;
-				filteredSprite.y = centerY;
+				filteredSprite.scale.set(baseScale * currentZoom);
+				filteredSprite.x = centerX + panX;
+				filteredSprite.y = centerY + panY;
 
 				// Create and apply photo edit filter
 				photoEditFilter = new PhotoEditFilter();
@@ -331,6 +354,180 @@
 	function toggleSplit() {
 		splitPosition = splitPosition === 0 ? 1 : 0;
 	}
+
+	/**
+	 * Handle wheel event for zooming
+	 */
+	function handleWheel(e: WheelEvent) {
+		if (!isInitialized || !originalSprite || !filteredSprite) return;
+
+		// Prevent default scrolling
+		e.preventDefault();
+
+		// Calculate zoom delta based on wheel direction
+		const zoomDelta = -e.deltaY * ZOOM_SENSITIVITY * 0.01;
+		const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom + zoomDelta));
+
+		// Only update if zoom actually changed
+		if (newZoom !== currentZoom) {
+			currentZoom = newZoom;
+
+			// Update sprite scales
+			const newScale = baseScale * currentZoom;
+			if (originalSprite) {
+				originalSprite.scale.set(newScale);
+			}
+			if (filteredSprite) {
+				filteredSprite.scale.set(newScale);
+			}
+		}
+	}
+
+	/**
+	 * Update sprite positions based on pan offset
+	 */
+	function updateSpritePositions() {
+		if (!originalSprite || !filteredSprite) return;
+
+		originalSprite.x = centerX + panX;
+		originalSprite.y = centerY + panY;
+		filteredSprite.x = centerX + panX;
+		filteredSprite.y = centerY + panY;
+	}
+
+	/**
+	 * Reset zoom and pan to fit container
+	 */
+	function resetZoom() {
+		if (!isInitialized) return;
+		currentZoom = 1;
+		panX = 0;
+		panY = 0;
+
+		if (originalSprite && filteredSprite) {
+			const newScale = baseScale * currentZoom;
+			originalSprite.scale.set(newScale);
+			filteredSprite.scale.set(newScale);
+			updateSpritePositions();
+		}
+	}
+
+	/**
+	 * Handle mouse down to start dragging
+	 */
+	function handleMouseDown(e: MouseEvent) {
+		if (!isInitialized) return;
+		isDragging = true;
+		lastMouseX = e.clientX;
+		lastMouseY = e.clientY;
+		e.preventDefault();
+	}
+
+	/**
+	 * Handle mouse move to drag the photo
+	 */
+	function handleMouseMove(e: MouseEvent) {
+		if (!isInitialized || !isDragging) return;
+
+		const deltaX = e.clientX - lastMouseX;
+		const deltaY = e.clientY - lastMouseY;
+
+		panX += deltaX;
+		panY += deltaY;
+
+		updateSpritePositions();
+
+		lastMouseX = e.clientX;
+		lastMouseY = e.clientY;
+	}
+
+	/**
+	 * Handle mouse up to stop dragging
+	 */
+	function handleMouseUp() {
+		isDragging = false;
+	}
+
+	/**
+	 * Handle touch start for mobile
+	 */
+	function handleTouchStart(e: TouchEvent) {
+		if (!isInitialized || e.touches.length !== 1) return;
+		isDragging = true;
+		const touch = e.touches[0];
+		lastMouseX = touch.clientX;
+		lastMouseY = touch.clientY;
+		e.preventDefault();
+	}
+
+	/**
+	 * Handle touch move for mobile
+	 */
+	function handleTouchMove(e: TouchEvent) {
+		if (!isInitialized || !isDragging || e.touches.length !== 1) return;
+
+		const touch = e.touches[0];
+		const deltaX = touch.clientX - lastMouseX;
+		const deltaY = touch.clientY - lastMouseY;
+
+		panX += deltaX;
+		panY += deltaY;
+
+		updateSpritePositions();
+
+		lastMouseX = touch.clientX;
+		lastMouseY = touch.clientY;
+		e.preventDefault();
+	}
+
+	/**
+	 * Handle touch end for mobile
+	 */
+	function handleTouchEnd() {
+		isDragging = false;
+	}
+
+	/**
+	 * Handle wheel events on the canvas container
+	 */
+	$effect(() => {
+		if (!canvasContainer || !isInitialized) return;
+
+		const container = canvasContainer;
+		container.addEventListener('wheel', handleWheel, { passive: false });
+
+		return () => {
+			container.removeEventListener('wheel', handleWheel);
+		};
+	});
+
+	/**
+	 * Handle mouse/touch events for panning
+	 */
+	$effect(() => {
+		if (!canvasContainer || !isInitialized) return;
+
+		const container = canvasContainer;
+
+		// Mouse events
+		container.addEventListener('mousedown', handleMouseDown);
+		document.addEventListener('mousemove', handleMouseMove);
+		document.addEventListener('mouseup', handleMouseUp);
+
+		// Touch events
+		container.addEventListener('touchstart', handleTouchStart, { passive: false });
+		container.addEventListener('touchmove', handleTouchMove, { passive: false });
+		container.addEventListener('touchend', handleTouchEnd);
+
+		return () => {
+			container.removeEventListener('mousedown', handleMouseDown);
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', handleMouseUp);
+			container.removeEventListener('touchstart', handleTouchStart);
+			container.removeEventListener('touchmove', handleTouchMove);
+			container.removeEventListener('touchend', handleTouchEnd);
+		};
+	});
 </script>
 
 <div
@@ -344,6 +541,17 @@
 		>
 			{splitPosition === 0 ? 'Filtered' : 'Original'}
 		</button>
+
+		<!-- Zoom Controls -->
+		<div class="absolute top-4 right-4 z-10 flex items-center gap-2">
+			<button
+				class="rounded-full border border-white/10 bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95"
+				onclick={resetZoom}
+				title="Reset zoom (scroll to zoom)"
+			>
+				{(currentZoom * 100).toFixed(0)}%
+			</button>
+		</div>
 
 		<!-- Split Position Slider -->
 		<div
@@ -360,7 +568,13 @@
 		</div>
 
 		<!-- Canvas Container -->
-		<div bind:this={canvasContainer} use:appendCanvas={canvasToAppend} class="flex h-full w-full items-center justify-center"></div>
+		<div
+			bind:this={canvasContainer}
+			use:appendCanvas={canvasToAppend}
+			class="flex h-full w-full items-center justify-center"
+			class:cursor-grab={!isDragging}
+			class:cursor-grabbing={isDragging}
+		></div>
 	{:else}
 		<!-- Empty State -->
 		<div class="flex flex-col items-center gap-4 text-zinc-600">

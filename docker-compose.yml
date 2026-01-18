@@ -1,0 +1,18 @@
+services:
+  darkroom-application:
+    image: darkroom-application:latest
+    ports:
+      - 4173:4173
+    networks:
+      - darkroom-network
+  darkroom-nginx:
+    image: darkroom-nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - darkroom-network
+
+networks:
+  darkroom-network:
+    driver: bridge

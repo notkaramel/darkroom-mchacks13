@@ -1,7 +1,11 @@
 .PHONY: build run
 
 build:
-	docker build -t darkroom-application ./application
+	docker build -t darkroom-application:latest ./application
+	docker build -t darkroom-nginx:latest ./nginx
 
 run:
-	docker run -p 4173:4173 darkroom-application:latest
+	docker compose up -d
+
+stop:
+	docker compose down

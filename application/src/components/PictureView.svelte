@@ -105,14 +105,16 @@
         if (!isInitialized || !colorFilter) return;
         
         // Access filter values to ensure reactivity tracking
+        // Values range from -100 to 100, where 0 is neutral
         const brightness = filters.basic.brightness;
         const contrast = filters.basic.contrast;
         const saturation = filters.color.saturation;
         
         colorFilter.reset();
-        colorFilter.brightness(brightness / 200, true);
-        colorFilter.contrast(contrast / 100, true);
-        colorFilter.saturate(saturation / 100, true);
+        
+        colorFilter.brightness((brightness + 100) / 100, true);
+        // colorFilter.contrast((contrast / 100) + 1, true);        
+        // colorFilter.saturate(((saturation) / 100) + 1, true);
     });
 
     // Update mask when split position changes

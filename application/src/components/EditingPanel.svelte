@@ -112,7 +112,7 @@
 				class:opacity-50={isLocked}
 				class:pointer-events-none={isLocked}
 			>
-				{#each hslColors as { name, color }}
+				{#each hslColors as { name, color } (name)}
 					<button
 						class={`h-5 w-5 rounded-full ring-2 ring-offset-2 ring-offset-zinc-900 transition-all focus:outline-none ${color} ${activeHslColor === name ? 'scale-110 ring-white' : 'opacity-80 ring-transparent hover:scale-110 hover:opacity-100'}`}
 						onclick={(e) => {

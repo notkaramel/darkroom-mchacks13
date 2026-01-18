@@ -23,6 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const user = new User({ username: body.username });
 		await user.save();
 
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { __v, ...safeUser } = user.toObject();
 
 		return json({ user: safeUser }, { status: 201 });

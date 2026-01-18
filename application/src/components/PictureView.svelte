@@ -20,6 +20,23 @@
 
 	// State: Canvas container reference
 	let canvasContainer = $state<HTMLDivElement>();
+	
+	// State: Canvas element to append
+	let canvasToAppend = $state<HTMLCanvasElement | null>(null);
+	
+	// Action to append canvas to container
+	function appendCanvas(node: HTMLDivElement, canvas: HTMLCanvasElement | null) {
+		if (canvas && !node.contains(canvas)) {
+			node.appendChild(canvas);
+		}
+		return {
+			update(canvas: HTMLCanvasElement | null) {
+				if (canvas && !node.contains(canvas)) {
+					node.appendChild(canvas);
+				}
+			}
+		};
+	}
 
 	// State: PIXI.js objects
 	let app: PIXI.Application | null = null;
@@ -61,7 +78,10 @@
 					return;
 				}
 
-				canvasContainer.appendChild(app.canvas);
+				// Set canvas to append (will be handled by effect)
+				if (app.canvas) {
+					canvasToAppend = app.canvas;
+				}
 
 				// Fetch image from API
 				const apiUrl = `/api/photo/${photoId}/file`;
@@ -185,6 +205,7 @@
 		pixiApp = null;
 	}
 
+
 	/**
 	 * Handle canvas resize when sidebars collapse/expand
 	 */
@@ -210,7 +231,7 @@
 				canvas.style.transform = `scale(${scale})`;
 				canvas.style.transformOrigin = 'center center';
 				canvas.style.transition = 'transform 300ms ease-in-out';
-			} catch (err) {
+			} catch {
 				// Silently ignore if app or canvas is no longer available
 			}
 		});
@@ -339,7 +360,7 @@
 		</div>
 
 		<!-- Canvas Container -->
-		<div bind:this={canvasContainer} class="flex h-full w-full items-center justify-center"></div>
+		<div bind:this={canvasContainer} use:appendCanvas={canvasToAppend} class="flex h-full w-full items-center justify-center"></div>
 	{:else}
 		<!-- Empty State -->
 		<div class="flex flex-col items-center gap-4 text-zinc-600">

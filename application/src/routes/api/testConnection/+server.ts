@@ -8,8 +8,9 @@ export const GET: RequestHandler = async () => {
 		return json({ ok: true });
 	} catch (err) {
 		console.error('DB connection failed:', err);
+		const error = err instanceof Error ? err : new Error('Unknown error');
 		return json(
-			{ ok: false, name: (err as any)?.name, message: (err as any)?.message },
+			{ ok: false, name: error.name, message: error.message },
 			{ status: 500 }
 		);
 	}

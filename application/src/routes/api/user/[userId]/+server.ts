@@ -27,7 +27,8 @@ export const GET: RequestHandler = async ({ params }) => {
 			return json({ error: 'User not found' }, { status: 404 });
 		}
 
-		const { password, __v, ...safeUser } = user as any;
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { password, __v, ...safeUser } = user;
 
 		return json({ user: safeUser }, { status: 200 });
 	} catch (error) {
@@ -61,7 +62,8 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 			return json({ error: 'User not found' }, { status: 404 });
 		}
 
-		const { password, __v, ...safeUser } = user as any;
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { password, __v, ...safeUser } = user;
 
 		return json({ user: safeUser }, { status: 200 });
 	} catch (error) {

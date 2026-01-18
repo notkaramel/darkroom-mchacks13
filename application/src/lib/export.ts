@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { PhotoEditFilter } from './PhotoEditFilter';
-import { loadFilters, type FilterSettings } from './storage';
+import { loadFilters } from './storage';
 
 /**
  * Detect image format from file buffer magic bytes

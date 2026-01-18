@@ -9,69 +9,69 @@ import mongoose, { Schema, model } from 'mongoose';
 
 export interface IPreset {
 	basic: {
-		brightness: Number;
-		contrast: Number;
-		highlight: Number;
-		shadow: Number;
+		brightness: number;
+		contrast: number;
+		highlight: number;
+		shadow: number;
 	};
 	color: {
-		temperature: Number;
-		tint: Number;
-		vibrance: Number;
-		saturation: Number;
+		temperature: number;
+		tint: number;
+		vibrance: number;
+		saturation: number;
 	};
 	hsl: {
 		red: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		orange: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		yellow: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		green: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		cyan: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		blue: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		purple: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 		magenta: {
-			hue: Number;
-			saturation: Number;
-			luminance: Number;
+			hue: number;
+			saturation: number;
+			luminance: number;
 		};
 	};
 	lens_corrections: {
-		distortion: Number;
-		chromatic_aberration: Number;
-		vignetting: Number;
+		distortion: number;
+		chromatic_aberration: number;
+		vignetting: number;
 	};
 	transform: {
-		rotate: Number;
-		vertical: Number;
-		horizontal: Number;
-		perspective: Number;
+		rotate: number;
+		vertical: number;
+		horizontal: number;
+		perspective: number;
 	};
 }
 

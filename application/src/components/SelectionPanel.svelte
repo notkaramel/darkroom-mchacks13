@@ -5,7 +5,7 @@
 	// Props
 	let {
 		onSelect,
-		onDelete = (photoId: string) => {},
+		onDelete = () => {},
 		selectedPhotoId = null
 	}: {
 		onSelect: (photoId: string) => void;
@@ -18,8 +18,8 @@
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
 
-	// State: Photos selected for export
-	let selectedForExport = $state<Set<string>>(new Set());
+	// State: Photos selected for export (using array for reactivity)
+	let selectedForExport = $state<string[]>([]);
 
 	// State: Export progress
 	let isExporting = $state(false);
@@ -111,11 +111,10 @@
 	 * Toggle photo selection for export (single click)
 	 */
 	function toggleExportSelection(photoId: string) {
-		selectedForExport = new Set(selectedForExport);
-		if (selectedForExport.has(photoId)) {
-			selectedForExport.delete(photoId);
+		if (selectedForExport.includes(photoId)) {
+			selectedForExport = selectedForExport.filter((id) => id !== photoId);
 		} else {
-			selectedForExport.add(photoId);
+			selectedForExport = [...selectedForExport, photoId];
 		}
 	}
 
@@ -149,14 +148,14 @@
 	 * Export selected photos
 	 */
 	async function handleExport() {
-		if (isExporting || selectedForExport.size === 0) return;
+		if (isExporting || selectedForExport.length === 0) return;
 
 		isExporting = true;
-		exportProgress = { current: 0, total: selectedForExport.size };
+		exportProgress = { current: 0, total: selectedForExport.length };
 
 		try {
 			await exportMultipleImages(
-				Array.from(selectedForExport),
+				selectedForExport,
 				undefined, // Auto-detect format from original file
 				0.95,
 				(current, total) => {
@@ -165,7 +164,7 @@
 			);
 
 			// Clear selection after successful export
-			selectedForExport = new Set();
+			selectedForExport = [];
 		} catch (err) {
 			console.error('Export failed:', err);
 			error = err instanceof Error ? err.message : 'Export failed';
@@ -192,7 +191,7 @@
 
 			// Remove from local state
 			photoIds = photoIds.filter((id) => id !== photoId);
-			selectedForExport.delete(photoId);
+			selectedForExport = selectedForExport.filter((id) => id !== photoId);
 			onDelete(photoId);
 		} catch (err) {
 			console.error('Delete error:', err);
@@ -271,16 +270,16 @@
 		{:else}
 			<!-- Photo Grid -->
 			<div class="flex w-full flex-col items-center gap-3">
-				{#each photoIds as photoId}
+				{#each photoIds as photoId (photoId)}
 					<div class="group relative shrink-0">
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
 							class:border-white={photoId === selectedPhotoId}
-							class:ring-2={photoId === selectedPhotoId || selectedForExport.has(photoId)}
+							class:ring-2={photoId === selectedPhotoId || selectedForExport.includes(photoId)}
 							class:ring-white={photoId === selectedPhotoId}
-							class:border-blue-500={selectedForExport.has(photoId) && photoId !== selectedPhotoId}
-							class:ring-blue-500={selectedForExport.has(photoId) && photoId !== selectedPhotoId}
-							class:border-zinc-800={photoId !== selectedPhotoId && !selectedForExport.has(photoId)}
+							class:border-blue-500={selectedForExport.includes(photoId) && photoId !== selectedPhotoId}
+							class:ring-blue-500={selectedForExport.includes(photoId) && photoId !== selectedPhotoId}
+							class:border-zinc-800={photoId !== selectedPhotoId && !selectedForExport.includes(photoId)}
 							class:hover:border-white={photoId !== selectedPhotoId}
 							onclick={() => handleImageClick(photoId)}
 						>
@@ -292,7 +291,7 @@
 							/>
 
 							<!-- Selection Checkmark -->
-							{#if selectedForExport.has(photoId)}
+							{#if selectedForExport.includes(photoId)}
 								<div
 									class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg"
 								>
@@ -343,7 +342,7 @@
 			onclick={handleExport}
 			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
 			title="Export selected photos"
-			disabled={selectedForExport.size === 0 || isExporting}
+			disabled={selectedForExport.length === 0 || isExporting}
 		>
 			{#if isExporting}
 				<!-- Loading spinner -->
@@ -378,7 +377,7 @@
 					<path d="m15 18 6-6-6-6" />
 				</svg>
 				<span class="text-sm font-medium"
-					>Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span
+					>Export{selectedForExport.length > 0 ? ` (${selectedForExport.length})` : ''}</span
 				>
 			{/if}
 		</button>

@@ -6,9 +6,14 @@ const pass = encodeURIComponent(MONGO_PASSWORD);
 
 const uri = `mongodb+srv://${user}:${pass}@darkroom-cluster.ffcj3de.mongodb.net/darkroom?retryWrites=true&w=majority`;
 
-let cached = (globalThis as any)._mongoose;
+interface MongooseCache {
+	conn: typeof mongoose | null;
+	promise: Promise<typeof mongoose> | null;
+}
+
+let cached = (globalThis as { _mongoose?: MongooseCache })._mongoose;
 if (!cached) {
-	cached = (globalThis as any)._mongoose = { conn: null, promise: null };
+	cached = (globalThis as { _mongoose: MongooseCache })._mongoose = { conn: null, promise: null };
 }
 
 export async function connectDB() {

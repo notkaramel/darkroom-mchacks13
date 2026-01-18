@@ -26,6 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Remove userId from body before creating preset
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { userId: _, ...presetData } = body;
 		const preset = new Preset(presetData);
 		await preset.save();

@@ -18,7 +18,8 @@ export const GET: RequestHandler = async () => {
 
 		const users = await User.find({}).lean();
 
-		const safeUsers = users.map((user: any) => {
+		const safeUsers = users.map((user) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { password, __v, ...safeUser } = user;
 			return safeUser;
 		});

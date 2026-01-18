@@ -1,22 +1,34 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
+
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
-	let { onSelect, onDelete = (img: string) => {}, onOpenAI = () => {}, selectedImage = null } = $props();
+	let {
+		onSelect,
+		onDelete = (img: string) => {},
+		onOpenAI = () => {},
+		selectedImage = null
+	} = $props();
 	import { exportMultipleImages } from '$lib/export';
+
+	type ImageItem = { photoId: string; previewURL: string };
 
 	// State to store the list of uploaded image strings (Data URLs)
 	let images = $state<string[]>([]);
-	
+
 	// State to store images selected for export
 	let selectedForExport = $state<Set<string>>(new Set());
-	
+
 	// Export progress state
 	let isExporting = $state(false);
 	let exportProgress = $state({ current: 0, total: 0 });
 
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
+
+	const userId = env.PUBLIC_DEMO_USER;
+	console.log(userId);
 
 	// Function to trigger the hidden file input click
 	function handleUpload() {
@@ -30,21 +42,34 @@
 			const file = target.files[0];
 			const reader = new FileReader();
 			// Read file as Data URL to display immediately
-			reader.onload = (e) => {
-				if (e.target?.result) {
-					const result = e.target.result as string;
-					
-					// Check if image already exists before adding
-				if (!images.includes(result)) {
-					// Add new image to the list
-					images = [...images, result];
-					// Automatically open the newly uploaded image in edit mode
-					onSelect(result);
+			reader.onload = async (e) => {
+				if (!e.target?.result) return;
+
+				try {
+					const formData = new FormData();
+					formData.append('file', file);
+					formData.append('userId', userId);
+
+					const res = await fetch('/api/photo/new', {
+						method: 'POST',
+						body: formData
+					});
+
+					if (!res.ok) {
+						console.error('Upload failed: ', await res.text());
+						return;
+					}
+
+					const { photoId } = await res.json();
+
+					images = [...images, photoId];
+					onSelect(photoId);
+				} catch (err) {
+					console.error('Upload error', err);
 				}
-			}
-		};
+			};
 			reader.readAsDataURL(file);
-			
+
 			// Reset the file input to allow selecting the same file again
 			target.value = '';
 		}
@@ -107,7 +132,7 @@
 			exportProgress = { current: 0, total: 0 };
 		}
 	}
-	
+
 	// Function to remove an image from the list
 	function removeImage(e: MouseEvent, index: number) {
 		e.stopPropagation(); // Prevent triggering selection
@@ -143,8 +168,6 @@
 				/>
 			</svg>
 		</button>
-
-
 	</div>
 
 	<!-- Gallery Grid Section (Single Column) -->
@@ -171,12 +194,23 @@
 							onclick={() => handleImageClick(img)}
 						>
 							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
-							
+
 							<!-- Selection Checkmark -->
 							{#if selectedForExport.has(img)}
-								<div class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg">
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 text-white">
-										<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+								<div
+									class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="h-3 w-3 text-white"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 								</div>
 							{/if}
@@ -205,9 +239,10 @@
 		{/if}
 	</div>
 
-
 	<!-- Ai Agent and Export Button (Bottom) -->
-	<div class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm">
+	<div
+		class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm"
+	>
 		<!-- <button
 			onclick={onOpenAI}
 			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 text-white shadow-md transition-all hover:from-purple-500 hover:to-blue-500 active:scale-95"
@@ -236,17 +271,29 @@
 		</button> -->
 		<button
 			onclick={handleExport}
-			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
 			title="Export selected images"
 			disabled={selectedForExport.size === 0 || isExporting}
 		>
 			{#if isExporting}
 				<!-- Loading spinner -->
-				<svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-					<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+				<svg
+					class="h-4 w-4 animate-spin"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+				>
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+					></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
 				</svg>
-				<span class="text-sm font-medium">Exporting {exportProgress.current}/{exportProgress.total}</span>
+				<span class="text-sm font-medium"
+					>Exporting {exportProgress.current}/{exportProgress.total}</span
+				>
 			{:else}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -261,7 +308,9 @@
 					class="lucide lucide-arrow-right-from-line-icon lucide-arrow-right-from-line"
 					><path d="M3 5v14" /><path d="M21 12H7" /><path d="m15 18 6-6-6-6" />
 				</svg>
-				<span class="text-sm font-medium">Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span>
+				<span class="text-sm font-medium"
+					>Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span
+				>
 			{/if}
 		</button>
 	</div>

@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is in .gitignore and will not be committed
+
+# DigitalOcean API token
+# Get it from: https://cloud.digitalocean.com/account/api/tokens
+do_token = "your-digitalocean-api-token-here"
+
+# Either provide droplet_id OR droplet_ip (not both)
+# If you have an existing droplet ID:
+# droplet_id = "123456789"
+
+# If you only have the IP address:
+droplet_ip = "123.456.789.0"
+
+# SSH configuration
+ssh_key_path = "~/.ssh/id_rsa"
+ssh_user     = "root"

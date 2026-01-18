@@ -8,6 +8,9 @@ const config = {
 		alias: {
 			// So you can import with `from 'components/...'`
 			components: 'src/components/'
+		},
+		csrf: {
+			trustedOrigins: ['https://darkroom.notkaramel.dev']
 		}
 	},
 	// Consult https://svelte.dev/docs/kit/integrations

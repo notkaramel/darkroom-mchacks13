@@ -22,14 +22,14 @@
 
 	// Handler to update the current image when a user selects one from the SelectionPanel
 	function handleSelectImage(img: string) {
-		if (currentImage === img){
+		if (currentImage === img) {
 			currentImage = null;
 			filters = getDefaultFilters();
 			return;
 		} else {
 			currentImage = img;
 		}
-		
+
 		// Load saved filters for this image, or use defaults
 		const savedFilters = loadFilters(img);
 		if (savedFilters) {
@@ -43,7 +43,7 @@
 	function handleDeleteImage(img: string) {
 		// Delete saved filters for this image
 		deleteFilters(img);
-		
+
 		if (currentImage === img) {
 			currentImage = null;
 			filters = getDefaultFilters();
@@ -55,7 +55,7 @@
 	$effect(() => {
 		// Watch for filter changes
 		JSON.stringify(filters); // Track all filter properties
-		
+
 		if (currentImage) {
 			// Debounce saves
 			if (saveTimeout) clearTimeout(saveTimeout);
@@ -64,7 +64,6 @@
 			}, 500); // Save 500ms after last change
 		}
 	});
-	
 </script>
 
 <!-- Main Application Layout: Flex Container -->
@@ -80,7 +79,6 @@
 				onSelect={handleSelectImage}
 				onDelete={handleDeleteImage}
 				selectedImage={currentImage}
-				
 			/>
 		</div>
 	</div>

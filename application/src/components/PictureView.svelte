@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as PIXI from 'pixi.js';
+	import { PhotoEditFilter } from '$lib/PhotoEditFilter';
 
 	let { image = null, filters } = $props();
 
@@ -7,7 +8,8 @@
 	let app: PIXI.Application | null = null;
 	let originalSprite: PIXI.Sprite | null = null;
 	let filteredSprite: PIXI.Sprite | null = null;
-	let colorFilter: PIXI.ColorMatrixFilter | null = null;
+
+	let photoEditFilter: PhotoEditFilter | null = null;
 	let maskGraphics: PIXI.Graphics | null = null;
 
 	let splitPosition = $state(0.5);
@@ -66,13 +68,12 @@
 				filteredSprite.x = centerX;
 				filteredSprite.y = centerY;
 
-				// Create color filter
-				colorFilter = new PIXI.ColorMatrixFilter();
-				filteredSprite.filters = [colorFilter];
+				// Create custom photo edit filter
+				photoEditFilter = new PhotoEditFilter();
+				filteredSprite.filters = [photoEditFilter];
 
 				// Create mask for filtered sprite
 				maskGraphics = new PIXI.Graphics();
-
 				filteredSprite.mask = maskGraphics;
 				app.stage.addChild(maskGraphics);
 				app.stage.addChild(filteredSprite);
@@ -95,26 +96,82 @@
 
 			originalSprite = null;
 			filteredSprite = null;
-			colorFilter = null;
+			photoEditFilter = null;
 			maskGraphics = null;
+		};
+	});
+
+	// Handle canvas resize when sidebars collapse/expand
+	$effect(() => {
+		if (!canvasContainer || !app || !app.canvas) return;
+
+		const resizeObserver = new ResizeObserver(() => {
+			if (!app || !app.canvas || !canvasContainer) return;
+
+			const containerWidth = canvasContainer.clientWidth;
+			const containerHeight = canvasContainer.clientHeight;
+			
+			// Calculate scale to fit container
+			const scaleX = containerWidth / app.canvas.width;
+			const scaleY = containerHeight / app.canvas.height;
+			const scale = Math.min(scaleX, scaleY);
+
+			// Apply CSS transform for smooth scaling
+			app.canvas.style.transform = `scale(${scale})`;
+			app.canvas.style.transformOrigin = 'center center';
+			app.canvas.style.transition = 'transform 300ms ease-in-out';
+		});
+
+		resizeObserver.observe(canvasContainer);
+
+		return () => {
+			resizeObserver.disconnect();
 		};
 	});
 
 	// Update filters when values change
 	$effect(() => {
-		if (!isInitialized || !colorFilter) return;
+		if (!isInitialized || !photoEditFilter) return;
 
-		// Access filter values to ensure reactivity tracking
-		// Values range from -100 to 100, where 0 is neutral
-		const brightness = filters.basic.brightness;
-		const contrast = filters.basic.contrast;
-		const saturation = filters.color.saturation;
+		const { basic, color, hsl } = filters;
 
-		colorFilter.reset();
+		// Map slider values (-100 to +100) to appropriate ranges
+		// Brightness: -100 to +100 -> -0.5 to +0.5 (additive)
+		photoEditFilter.brightness = basic.brightness / 200;
 
-		colorFilter.brightness((brightness + 100) / 100, true);
-		// colorFilter.contrast((contrast / 100) + 1, true);
-		// colorFilter.saturate(((saturation) / 100) + 1, true);
+		// Contrast: -100 to +100 -> -1 to +1
+		photoEditFilter.contrast = basic.contrast / 100;
+
+		// Highlights: -100 to +100 -> -0.3 to +0.3
+		photoEditFilter.highlights = basic.highlight / 333;
+
+		// Shadows: -100 to +100 -> -0.3 to +0.3
+		photoEditFilter.shadows = basic.shadow / 333;
+
+		// Temperature: -100 to +100 -> -1 to +1
+		photoEditFilter.temperature = color.temperature / 100;
+
+		// Tint: -100 to +100 -> -1 to +1
+		photoEditFilter.tint = color.tint / 100;
+
+		// Saturation: -100 to +100 -> -1 to +1 (0 is neutral)
+		photoEditFilter.saturation = color.saturation / 100;
+
+		// Vibrance: -100 to +100 -> -0.5 to +0.5 (more subtle than saturation)
+		photoEditFilter.vibrance = color.vibrance / 200;
+
+		// HSL Per-Color Adjustments
+		// Hue: -100 to +100 -> -0.5 to +0.5 (in HSL space 0-1)
+		// Saturation: -100 to +100 -> -1 to +1
+		// Luminance: -100 to +100 -> -0.3 to +0.3
+		photoEditFilter.setRedHSL(hsl.red.hue / 200, hsl.red.saturation / 100, hsl.red.luminance / 333);
+		photoEditFilter.setOrangeHSL(hsl.orange.hue / 200, hsl.orange.saturation / 100, hsl.orange.luminance / 333);
+		photoEditFilter.setYellowHSL(hsl.yellow.hue / 200, hsl.yellow.saturation / 100, hsl.yellow.luminance / 333);
+		photoEditFilter.setGreenHSL(hsl.green.hue / 200, hsl.green.saturation / 100, hsl.green.luminance / 333);
+		photoEditFilter.setCyanHSL(hsl.cyan.hue / 200, hsl.cyan.saturation / 100, hsl.cyan.luminance / 333);
+		photoEditFilter.setBlueHSL(hsl.blue.hue / 200, hsl.blue.saturation / 100, hsl.blue.luminance / 333);
+		photoEditFilter.setPurpleHSL(hsl.purple.hue / 200, hsl.purple.saturation / 100, hsl.purple.luminance / 333);
+		photoEditFilter.setMagentaHSL(hsl.magenta.hue / 200, hsl.magenta.saturation / 100, hsl.magenta.luminance / 333);
 	});
 
 	// Update mask when split position changes
@@ -159,7 +216,7 @@
             />
         </div>
         
-        <div bind:this={canvasContainer} class="w-full h-full"></div>
+        <div bind:this={canvasContainer} class="flex w-full h-full items-center justify-center"></div>
     {:else}
         <div class="flex flex-col items-center gap-4 text-zinc-600">
             <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl">
@@ -171,3 +228,16 @@
         </div>
     {/if}
 </div>
+
+<style>
+    .slider::-webkit-slider-runnable-track {
+        background: rgb(39 39 42); /* zinc-800 */
+    }
+
+    /* Ensure canvas resizes smoothly */
+    :global(canvas) {
+        transition: none !important;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+</style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    let { label, value = $bindable(), min = -100, max = 100 } = $props();
+    let { label, value = $bindable(), min = -100, max = 100, gradient = '' } = $props();
 </script>
 
 <div class="group">
@@ -9,7 +9,7 @@
     </div>
     <input 
         type="range" 
-        class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" 
+        class={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${gradient || 'bg-zinc-800'}`}
         {min} 
         {max} 
         bind:value

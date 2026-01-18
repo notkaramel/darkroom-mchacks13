@@ -15,14 +15,15 @@ async function connectDB() {
 	}
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request,url }) => {
 	try {
 		await connectDB();
 
 		// Get userId from request body (or use PUBLIC_DEMO_USER as default)
 		const formData = await request.formData();
+		const queryUserId = url.searchParams.get('userId');
 		const bodyUserId = formData.get('userId')?.toString();
-		const userId = bodyUserId || PUBLIC_DEMO_USER;
+		const userId = queryUserId || bodyUserId || PUBLIC_DEMO_USER;
 
 		if (!userId) {
 			return json({ error: 'userId is required' }, { status: 400 });
@@ -91,8 +92,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		const user = await User.findOneAndUpdate(
 			{ username: userId },
 			{ $addToSet: { photos: photoId } }, //prevents duplicates from happening
-			{ new: true }
+			{ new: true, upsert: true }
 		);
+
+		console.log("Updated user photos: ", user?.photos);
 
 		if (!user) {
 			//rollback: remove photo if the user does not exist

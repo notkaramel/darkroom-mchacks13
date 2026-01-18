@@ -1,19 +1,24 @@
+
+
+
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
+	import { onMount } from 'svelte';
+	
+	
 
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
 	let { onSelect, onDelete = (img: string) => {}, onOpenAI = () => {}, selectedImage = null } = $props();
 	import { exportMultipleImages } from '$lib/export';
+	
 
-	type ImageItem = { photoId: string; previewURL: string };
+	type ImageItem = { photoId: string; url: string };
 
 	// State to store the list of uploaded image strings (Data URLs)
-<<<<<<< HEAD
+
 	let images = $state<ImageItem[]>([]);
-=======
-	let images = $state<string[]>([]);
 	
 	// State to store images selected for export
 	let selectedForExport = $state<Set<string>>(new Set());
@@ -21,12 +26,27 @@
 	// Export progress state
 	let isExporting = $state(false);
 	let exportProgress = $state({ current: 0, total: 0 });
->>>>>>> minh/webgl
+
 
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
 
 	const userId = env.PUBLIC_DEMO_USER;
+
+	onMount(async() => {
+		const res = await fetch(`/api/user/${encodeURIComponent(userId)}`);
+		if (!res.ok) {
+			console.error('Failed to load user: ', await res.text());
+			return;
+		}
+		const { user } = await res.json();
+
+		images = (user.photos ?? []).map((photoId: string) => ({
+			photoId,
+			url: `/api/photo/${photoId}`
+		}));
+	});
+
 	console.log(userId);
 
 	// Function to trigger the hidden file input click
@@ -34,27 +54,18 @@
 		fileInput?.click();
 	}
 
-	// Handler for when a file is selected from the file dialog
-	function onFileSelected(e: Event) {
+	async function onFileSelected(e: Event) {
 		const target = e.target as HTMLInputElement;
-		if (target.files && target.files[0]) {
-			const file = target.files[0];
-			const reader = new FileReader();
-			// Read file as Data URL to display immediately
-<<<<<<< HEAD
-			reader.onload = async (e) => {
-				if (!e.target?.result) return;
+		if (!target.files?.[0])
+		return;
 
-				const previewURL = e.target.result as string;
-
+		const file = target.files[0];
+	
 				try {
-					const formData = new FormData();
-					formData.append('file', file);
-					formData.append('userId', userId);
-
-					const res = await fetch('/api/photo/new', {
+					const res = await fetch (`/api/photo/new?userId=${encodeURIComponent(userId)}`, {
 						method: 'POST',
-						body: formData
+						headers: { 'Content-Type': file.type},
+						body: file
 					});
 
 					if (!res.ok) {
@@ -64,61 +75,47 @@
 
 					const { photoId } = await res.json();
 
-					const item: ImageItem = { photoId, previewURL };
-					images = [...images, item];
-
+					images = [...images, {photoId, url: `/api/photo/${photoId}`}];
 					onSelect(photoId);
+
 				} catch (err) {
 					console.error('Upload error', err);
-=======
-			reader.onload = (e) => {
-				if (e.target?.result) {
-					const result = e.target.result as string;
-					
-					// Check if image already exists before adding
-				if (!images.includes(result)) {
-					// Add new image to the list
-					images = [...images, result];
-					// Automatically open the newly uploaded image in edit mode
-					onSelect(result);
->>>>>>> minh/webgl
-				}
-			}
-		};
-			reader.readAsDataURL(file);
+
+				} finally {
 
 			// Reset the file input to allow selecting the same file again
 			target.value = '';
+			}
 		}
-	}
+	
 
 	// Single click - toggle selection for export
-	function toggleExportSelection(img: string) {
+	function toggleExportSelection(photoId: string) {
 		selectedForExport = new Set(selectedForExport);
-		if (selectedForExport.has(img)) {
-			selectedForExport.delete(img);
+		if (selectedForExport.has(photoId)) {
+			selectedForExport.delete(photoId);
 		} else {
-			selectedForExport.add(img);
+			selectedForExport.add(photoId);
 		}
 	}
 
 	// Double click - open in edit mode
-	function openForEdit(img: string) {
-		onSelect(img);
+	function openForEdit(photoId: string) {
+		onSelect(photoId);
 	}
 
 	// Click handler with double-click detection
 	let clickTimeout: number | null = null;
-	function handleImageClick(img: string) {
+	function handleImageClick(photoId: string) {
 		if (clickTimeout) {
 			// Double click detected
 			clearTimeout(clickTimeout);
 			clickTimeout = null;
-			openForEdit(img);
+			openForEdit(photoId);
 		} else {
 			// Single click - wait to see if it becomes a double click
 			clickTimeout = window.setTimeout(() => {
-				toggleExportSelection(img);
+				toggleExportSelection(photoId);
 				clickTimeout = null;
 			}, 250); // 250ms delay to detect double click
 		}
@@ -155,12 +152,10 @@
 		e.stopPropagation(); // Prevent triggering selection
 		const removedImage = images[index]; // Capture image before removing
 		images = images.filter((_, i) => i !== index);
-<<<<<<< HEAD
+
+		selectedForExport.delete(removedImage.photoId); // Remove from export selection
 		onDelete(removedImage.photoId); // Notify parent
-=======
-		selectedForExport.delete(removedImage); // Remove from export selection
-		onDelete(removedImage); // Notify parent
->>>>>>> minh/webgl
+
 	}
 </script>
 
@@ -207,36 +202,28 @@
 					<div class="group relative shrink-0">
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
-<<<<<<< HEAD
+
 							class:border-white={img.photoId === selectedImage}
-							class:ring-1={img.photoId === selectedImage}
+							class:ring-2={img.photoId === selectedImage || selectedForExport.has(img.photoId)}
 							class:ring-white={img.photoId === selectedImage}
-							class:border-zinc-800={img.photoId !== selectedImage}
+							class:border-blue-500={selectedForExport.has(img.photoId) && img.photoId !== selectedImage}
+							class:ring-blue-500={selectedForExport.has(img.photoId) && img.photoId !== selectedImage}
+							class:border-zinc-800={img.photoId !== selectedImage && !selectedForExport.has(img.photoId)}
 							class:hover:border-white={img.photoId !== selectedImage}
-							onclick={() => onSelect(img.photoId)}
+							onclick={() => handleImageClick(img.photoId)}
 						>
-							<img src={img.previewURL} alt="Thumbnail" class="h-full w-full object-cover" />
-=======
-							class:border-white={img === selectedImage}
-							class:ring-2={img === selectedImage || selectedForExport.has(img)}
-							class:ring-white={img === selectedImage}
-							class:border-blue-500={selectedForExport.has(img) && img !== selectedImage}
-							class:ring-blue-500={selectedForExport.has(img) && img !== selectedImage}
-							class:border-zinc-800={img !== selectedImage && !selectedForExport.has(img)}
-							class:hover:border-white={img !== selectedImage}
-							onclick={() => handleImageClick(img)}
-						>
-							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
+
+						<img src={img.url} alt="Thumbnail" class="h-full w-full object-cover" />
 							
-							<!-- Selection Checkmark -->
-							{#if selectedForExport.has(img)}
+						<!-- Selection Checkmark -->
+							{#if selectedForExport.has(img.photoId)}
 								<div class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg">
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 text-white">
 										<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
 									</svg>
 								</div>
 							{/if}
->>>>>>> minh/webgl
+
 						</button>
 
 						<!-- Delete Button (Visible on Hover) -->

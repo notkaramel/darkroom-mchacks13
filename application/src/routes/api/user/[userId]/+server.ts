@@ -12,7 +12,6 @@ async function connectDB() {
 	}
 }
 
-
 export const GET: RequestHandler = async ({ params }) => {
 	try {
 		await connectDB();
@@ -48,7 +47,6 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 
 		const updates = await request.json();
 
-		
 		delete updates.password;
 		delete updates._id;
 		delete updates.__v;

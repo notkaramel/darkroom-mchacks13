@@ -1,142 +1,142 @@
 <script lang="ts">
-    import * as PIXI from 'pixi.js';
-    
-    let { image = null, filters } = $props();
+	import * as PIXI from 'pixi.js';
 
-    let canvasContainer = $state<HTMLDivElement>();
-    let app: PIXI.Application | null = null;
-    let originalSprite: PIXI.Sprite | null = null;
-    let filteredSprite: PIXI.Sprite | null = null;
-    let colorFilter: PIXI.ColorMatrixFilter | null = null;
-    let maskGraphics: PIXI.Graphics | null = null;
-    
-    let splitPosition = $state(0);
-    let isInitialized = $state(false);
+	let { image = null, filters } = $props();
 
-    $effect(() => {
-        if (!image || !canvasContainer) return;
-        
-        let mounted = true;
-        
-        (async () => {
-            try {
-                app = new PIXI.Application();
-                
-                await app.init({
-                    width: canvasContainer.clientWidth,
-                    height: canvasContainer.clientHeight,
-                    backgroundAlpha: 0,
-                    resizeTo: canvasContainer
-                });
-                
-                if (!mounted) {
-                    app.destroy(true);
-                    return;
-                }
-                
-                canvasContainer.appendChild(app.canvas);
-                
-                const texture = await PIXI.Assets.load(image);
-                
-                if (!mounted) {
-                    app.destroy(true);
-                    return;
-                }
-                
-                const scale = Math.min(
-                    app.screen.width / texture.width,
-                    app.screen.height / texture.height
-                );
-                
-                const centerX = app.screen.width / 2;
-                const centerY = app.screen.height / 2;
-                
-                // Original sprite (left side - unfiltered)
-                originalSprite = new PIXI.Sprite(texture);
-                originalSprite.anchor.set(0.5);
-                originalSprite.scale.set(scale);
-                originalSprite.x = centerX;
-                originalSprite.y = centerY;
-                app.stage.addChild(originalSprite);
-                
-                // Filtered sprite (right side - filtered)
-                filteredSprite = new PIXI.Sprite(texture);
-                filteredSprite.anchor.set(0.5);
-                filteredSprite.scale.set(scale);
-                filteredSprite.x = centerX;
-                filteredSprite.y = centerY;
-                
-                // Create color filter
-                colorFilter = new PIXI.ColorMatrixFilter();
-                filteredSprite.filters = [colorFilter];
-                
-                // Create mask for filtered sprite
-                maskGraphics = new PIXI.Graphics();
-                
-                filteredSprite.mask = maskGraphics;
-                app.stage.addChild(maskGraphics);
-                app.stage.addChild(filteredSprite);
-                
-                isInitialized = true;
-                updateMask();
-            } catch (error) {
-                console.error('Error initializing Pixi:', error);
-            }
-        })();
-        
-        return () => {
-            mounted = false;
-            isInitialized = false;
-            
-            if (app) {
-                app.destroy(true);
-                app = null;
-            }
-            
-            originalSprite = null;
-            filteredSprite = null;
-            colorFilter = null;
-            maskGraphics = null;
-        };
-    });
+	let canvasContainer = $state<HTMLDivElement>();
+	let app: PIXI.Application | null = null;
+	let originalSprite: PIXI.Sprite | null = null;
+	let filteredSprite: PIXI.Sprite | null = null;
+	let colorFilter: PIXI.ColorMatrixFilter | null = null;
+	let maskGraphics: PIXI.Graphics | null = null;
 
-    // Update filters when values change
-    $effect(() => {
-        if (!isInitialized || !colorFilter) return;
-        
-        // Access filter values to ensure reactivity tracking
-        // Values range from -100 to 100, where 0 is neutral
-        const brightness = filters.basic.brightness;
-        const contrast = filters.basic.contrast;
-        const saturation = filters.color.saturation;
-        
-        colorFilter.reset();
-        
-        colorFilter.brightness((brightness + 100) / 100, true);
-        // colorFilter.contrast((contrast / 100) + 1, true);        
-        // colorFilter.saturate(((saturation) / 100) + 1, true);
-    });
+	let splitPosition = $state(0.5);
+	let isInitialized = $state(false);
 
-    // Update mask when split position changes
-    $effect(() => {
-        if (!isInitialized) return;
-        updateMask();
-    });
+	$effect(() => {
+		if (!image || !canvasContainer) return;
 
-    function updateMask() {
-        if (!app || !maskGraphics || !isInitialized) return;
-        
-        maskGraphics.clear();
-        
-        const splitX = app.screen.width * splitPosition;
-        
-        maskGraphics.rect(splitX, 0, app.screen.width - splitX, app.screen.height);
-        maskGraphics.fill(0xffffff);
-    }
+		let mounted = true;
 
-    const toggleSplit = () => {
-        splitPosition = splitPosition === 0 ? 1 : 0;
-    };
+		(async () => {
+			try {
+				app = new PIXI.Application();
+
+				await app.init({
+					width: canvasContainer.clientWidth,
+					height: canvasContainer.clientHeight,
+					backgroundAlpha: 0,
+					resizeTo: canvasContainer
+				});
+
+				if (!mounted) {
+					app.destroy(true);
+					return;
+				}
+
+				canvasContainer.appendChild(app.canvas);
+
+				const texture = await PIXI.Assets.load(image);
+
+				if (!mounted) {
+					app.destroy(true);
+					return;
+				}
+
+				const scale = Math.min(
+					app.screen.width / texture.width,
+					app.screen.height / texture.height
+				);
+
+				const centerX = app.screen.width / 2;
+				const centerY = app.screen.height / 2;
+
+				// Original sprite (left side - unfiltered)
+				originalSprite = new PIXI.Sprite(texture);
+				originalSprite.anchor.set(0.5);
+				originalSprite.scale.set(scale);
+				originalSprite.x = centerX;
+				originalSprite.y = centerY;
+				app.stage.addChild(originalSprite);
+
+				// Filtered sprite (right side - filtered)
+				filteredSprite = new PIXI.Sprite(texture);
+				filteredSprite.anchor.set(0.5);
+				filteredSprite.scale.set(scale);
+				filteredSprite.x = centerX;
+				filteredSprite.y = centerY;
+
+				// Create color filter
+				colorFilter = new PIXI.ColorMatrixFilter();
+				filteredSprite.filters = [colorFilter];
+
+				// Create mask for filtered sprite
+				maskGraphics = new PIXI.Graphics();
+
+				filteredSprite.mask = maskGraphics;
+				app.stage.addChild(maskGraphics);
+				app.stage.addChild(filteredSprite);
+
+				isInitialized = true;
+				updateMask();
+			} catch (error) {
+				console.error('Error initializing Pixi:', error);
+			}
+		})();
+
+		return () => {
+			mounted = false;
+			isInitialized = false;
+
+			if (app) {
+				app.destroy(true);
+				app = null;
+			}
+
+			originalSprite = null;
+			filteredSprite = null;
+			colorFilter = null;
+			maskGraphics = null;
+		};
+	});
+
+	// Update filters when values change
+	$effect(() => {
+		if (!isInitialized || !colorFilter) return;
+
+		// Access filter values to ensure reactivity tracking
+		// Values range from -100 to 100, where 0 is neutral
+		const brightness = filters.basic.brightness;
+		const contrast = filters.basic.contrast;
+		const saturation = filters.color.saturation;
+
+		colorFilter.reset();
+
+		colorFilter.brightness((brightness + 100) / 100, true);
+		// colorFilter.contrast((contrast / 100) + 1, true);
+		// colorFilter.saturate(((saturation) / 100) + 1, true);
+	});
+
+	// Update mask when split position changes
+	$effect(() => {
+		if (!isInitialized) return;
+		updateMask();
+	});
+
+	function updateMask() {
+		if (!app || !maskGraphics || !isInitialized) return;
+
+		maskGraphics.clear();
+
+		const splitX = app.screen.width * splitPosition;
+
+		maskGraphics.rect(splitX, 0, app.screen.width - splitX, app.screen.height);
+		maskGraphics.fill(0xffffff);
+	}
+
+	const toggleSplit = () => {
+		splitPosition = splitPosition === 0 ? 1 : 0;
+	};
 </script>
 
 <div class="relative flex flex-col h-full w-full items-center justify-center overflow-hidden bg-zinc-950 py-20 px-2">
@@ -155,7 +155,7 @@
                 max="1"
                 step="0.01"
                 bind:value={splitPosition}
-                class="w-48 slider cursor-pointer"
+                class="w-48 slider cursor-pointer "
             />
         </div>
         

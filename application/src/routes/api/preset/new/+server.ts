@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { MONGO_USERNAME, MONGO_PASSWORD } from '$env/static/private';
+import { PUBLIC_DEMO_USER } from '$env/static/public';
 import { Preset } from '$lib/models/Preset';
+import { User } from '$lib/models/User';
 import { json, type RequestHandler } from '@sveltejs/kit';
 
 const uri = `mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@darkroom-cluster.ffcj3de.mongodb.net/?appName=darkroom-cluster`;
@@ -16,10 +18,31 @@ export const POST: RequestHandler = async ({ request }) => {
 		await connectDB();
 		const body = await request.json();
 
-		const preset = new Preset(body);
+		// Get userId from request body (or use PUBLIC_DEMO_USER as default)
+		const userId = body.userId || PUBLIC_DEMO_USER;
+		
+		if (!userId) {
+			return json({ error: 'userId is required' }, { status: 400 });
+		}
+
+		// Remove userId from body before creating preset
+		const { userId: _, ...presetData } = body;
+		const preset = new Preset(presetData);
 		await preset.save();
 
-    // Add preset to the user requesting
+		// Add preset to the user requesting
+		const presetId = preset._id.toString();
+		const user = await User.findOneAndUpdate(
+			{ username: userId },
+			{ $addToSet: { presets: presetId } }, //prevents duplicates from happening
+			{ new: true }
+		);
+
+		if (!user) {
+			//rollback: remove preset if the user does not exist
+			await Preset.deleteOne({ _id: preset._id });
+			return json({ error: 'User not found (upload rolled back)' }, { status: 404 });
+		}
 
 		return json(preset, { status: 201 });
 	} catch (error) {

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
+
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
 	let { onSelect, onDelete = (img: string) => {}, selectedImage = null } = $props();
 
-	type ImageItem = { photoId: string; previewURL: string};
+	type ImageItem = { photoId: string; previewURL: string };
 
 	// State to store the list of uploaded image strings (Data URLs)
 	let images = $state<ImageItem[]>([]);
@@ -12,7 +14,8 @@
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
 
-	const userId = 'darkseid';
+	const userId = env.PUBLIC_DEMO_USER;
+	console.log(userId);
 
 	// Function to trigger the hidden file input click
 	function handleUpload() {
@@ -33,9 +36,13 @@
 				const previewURL = e.target.result as string;
 
 				try {
-					const res = await fetch(`/api/photo/new?userId=${encodeURIComponent(userId)}`, {
+					const formData = new FormData();
+					formData.append('file', file);
+					formData.append('userId', userId);
+
+					const res = await fetch('/api/photo/new', {
 						method: 'POST',
-						body: file
+						body: formData
 					});
 
 					if (!res.ok) {
@@ -53,8 +60,8 @@
 					console.error('Upload error', err);
 				}
 			};
- 			reader.readAsDataURL(file);
-			
+			reader.readAsDataURL(file);
+
 			// Reset the file input to allow selecting the same file again
 			target.value = '';
 		}
@@ -115,7 +122,6 @@
 							class:border-zinc-800={img.photoId !== selectedImage}
 							class:hover:border-white={img.photoId !== selectedImage}
 							onclick={() => onSelect(img.photoId)}
-
 						>
 							<img src={img.previewURL} alt="Thumbnail" class="h-full w-full object-cover" />
 						</button>

@@ -3,7 +3,6 @@
 .slider {
     -webkit-appearance: none;
     appearance: none;
-    background: transparent;
     outline: none;
 }
 
@@ -11,14 +10,12 @@
 .slider::-webkit-slider-runnable-track {
     width: 100%;
     height: 4px;
-    background: rgb(39 39 42); /* zinc-800 */
     border-radius: 8px;
 }
 
 .slider::-moz-range-track {
     width: 100%;
     height: 4px;
-    background: rgb(39 39 42); /* zinc-800 */
     border-radius: 8px;
 }
 

@@ -8,7 +8,7 @@
 	let images = $state<string[]>([]);
 
 	// Reference to the hidden file input element
-	let fileInput = $state<HTMLInputElement | undefined>();
+	let fileInput: HTMLInputElement | undefined;
 
 	// Function to trigger the hidden file input click
 	function handleUpload() {
@@ -30,9 +30,24 @@
 					images = [...images, result];
 					// Automatically select the newly uploaded image
 					onSelect(result);
+
+					// TODO: Upload photo to database API should be called here
+					// Call POST /api/photo/new with the file buffer
+					// Example:
+					// const formData = new FormData();
+					// formData.append('file', file);
+					// const response = await fetch('/api/photo/new', {
+					// 	method: 'POST',
+					// 	body: file  // Send the file as binary data
+					// });
+					// const { photoId } = await response.json();
+					// Store the photoId for future reference if needed
 				}
 			};
 			reader.readAsDataURL(file);
+			
+			// Reset the file input to allow selecting the same file again
+			target.value = '';
 		}
 	}
 	// Function to remove an image from the list

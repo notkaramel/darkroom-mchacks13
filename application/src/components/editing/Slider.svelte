@@ -9,7 +9,7 @@
     </div>
     <input 
         type="range" 
-        class={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${gradient || 'bg-zinc-800'}`}
+        class={`h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-white [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white  ${gradient || 'bg-zinc-800'}`}
         {min} 
         {max} 
         bind:value

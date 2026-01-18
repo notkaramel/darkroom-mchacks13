@@ -2,25 +2,25 @@
 	import Slider from 'components/editing/Slider.svelte';
 	import Section from 'components/editing/Section.svelte';
 	import Histogram from 'components/editing/Histogram.svelte';
+	import { getDefaultFilters, type FilterSettings } from '$lib/storage';
 
-	// Bindable prop to allow two-way state update with the parent
-	let { 
-		filters = $bindable(), 
-		image = null
-	}: { 
-		filters: any, 
-		image: string | null
+	// Props
+	let {
+		filters = $bindable(),
+		photoId = null
+	}: {
+		filters: FilterSettings;
+		photoId: string | null;
 	} = $props();
 
-	// Determine if sliders should be locked (no image loaded)
-	const isLocked = $derived(!image);
+	// State: Determine if sliders should be locked (no photo loaded)
+	const isLocked = $derived(!photoId);
 
+	// State: Currently selected HSL color channel
 	type HslColorKey = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'magenta';
-
-	// State for currently selected HSL color channel
 	let activeHslColor = $state<HslColorKey>('red');
 
-	// State for collapsible sections
+	// State: Collapsible sections
 	let expanded = $state({
 		basic: true,
 		color: true,
@@ -29,35 +29,23 @@
 		transform: false
 	});
 
+	// HSL color definitions
 	const hslColors = [
-		{ name: 'red', color: 'bg-red-500' },
-		{ name: 'orange', color: 'bg-orange-500' },
-		{ name: 'yellow', color: 'bg-yellow-400' },
-		{ name: 'green', color: 'bg-green-500' },
-		{ name: 'cyan', color: 'bg-cyan-400' },
-		{ name: 'blue', color: 'bg-blue-500' },
-		{ name: 'purple', color: 'bg-purple-500' },
-		{ name: 'magenta', color: 'bg-pink-500' }
+		{ name: 'red' as const, color: 'bg-red-500' },
+		{ name: 'orange' as const, color: 'bg-orange-500' },
+		{ name: 'yellow' as const, color: 'bg-yellow-400' },
+		{ name: 'green' as const, color: 'bg-green-500' },
+		{ name: 'cyan' as const, color: 'bg-cyan-400' },
+		{ name: 'blue' as const, color: 'bg-blue-500' },
+		{ name: 'purple' as const, color: 'bg-purple-500' },
+		{ name: 'magenta' as const, color: 'bg-pink-500' }
 	] as const;
 
-	// Function to reset all filters to their default neutral values
-	function reset() {
-		filters = {
-			basic: { brightness: 0, contrast: 0, highlight: 0, shadow: 0 },
-			color: { temperature: 0, tint: 0, vibrance: 0, saturation: 0 },
-			hsl: {
-				red: { hue: 0, saturation: 0, luminance: 0 },
-				orange: { hue: 0, saturation: 0, luminance: 0 },
-				yellow: { hue: 0, saturation: 0, luminance: 0 },
-				green: { hue: 0, saturation: 0, luminance: 0 },
-				cyan: { hue: 0, saturation: 0, luminance: 0 },
-				blue: { hue: 0, saturation: 0, luminance: 0 },
-				purple: { hue: 0, saturation: 0, luminance: 0 },
-				magenta: { hue: 0, saturation: 0, luminance: 0 }
-			},
-			lens_corrections: { distortion: 0, chromatic_aberration: 0, vignetting: 0 },
-			transform: { rotate: 0, vertical: 0, horizontal: 0, perspective: 0 }
-		};
+	/**
+	 * Reset all filters to default neutral values
+	 */
+	function resetFilters() {
+		filters = getDefaultFilters();
 	}
 </script>
 
@@ -68,23 +56,24 @@
 	<div class="mb-8 flex items-center justify-between">
 		<h2 class="text-xs font-bold tracking-widest text-zinc-500 uppercase">Adjustments</h2>
 		<button
-			onclick={reset}
-			class="text-xs font-medium text-zinc-500 transition-colors hover:text-white"
+			onclick={resetFilters}
+			class="text-xs font-medium text-zinc-500 transition-colors hover:text-white disabled:opacity-50"
+			disabled={isLocked}
 		>
 			Reset All
 		</button>
 	</div>
 
 	<!-- Histogram -->
-	{#if !isLocked}
+	{#if !isLocked && photoId}
 		<div class="mb-6">
-			<Histogram imageUrl={image} {filters} />
+			<Histogram photoId={photoId} {filters} />
 		</div>
 	{/if}
 
-	<!-- Sliders Container -->
+	<!-- Adjustment Sliders -->
 	<div class="space-y-6 pb-10">
-		<!-- Basic Section -->
+		<!-- Basic Adjustments -->
 		<Section title="Basic" bind:isExpanded={expanded.basic}>
 			<Slider
 				label="Brightness"
@@ -97,7 +86,7 @@
 			<Slider label="Shadows" bind:value={filters.basic.shadow} lock={isLocked} />
 		</Section>
 
-		<!-- Color Section -->
+		<!-- Color Adjustments -->
 		<Section title="Color" bind:isExpanded={expanded.color}>
 			<Slider
 				label="Temp"
@@ -115,7 +104,7 @@
 			<Slider label="Saturation" bind:value={filters.color.saturation} lock={isLocked} />
 		</Section>
 
-		<!-- HSL Section -->
+		<!-- HSL Per-Color Adjustments -->
 		<Section title="HSL" bind:isExpanded={expanded.hsl}>
 			<!-- Color Selector -->
 			<div
@@ -150,7 +139,7 @@
 			/>
 		</Section>
 
-		<!-- Lens Corrections Section -->
+		<!-- Lens Corrections -->
 		<Section title="Lens" bind:isExpanded={expanded.lens}>
 			<Slider label="Distortion" bind:value={filters.lens_corrections.distortion} lock={isLocked} />
 			<Slider
@@ -161,7 +150,7 @@
 			<Slider label="Vignetting" bind:value={filters.lens_corrections.vignetting} lock={isLocked} />
 		</Section>
 
-		<!-- Transform Section -->
+		<!-- Transform -->
 		<Section title="Transform" bind:isExpanded={expanded.transform}>
 			<Slider
 				label="Rotate"

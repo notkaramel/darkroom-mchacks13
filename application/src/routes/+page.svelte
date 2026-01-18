@@ -1,37 +1,41 @@
 <script lang="ts">
-	// Import the three main panels of the application
 	import * as PIXI from 'pixi.js';
 	import SelectionPanel from 'components/SelectionPanel.svelte';
 	import PictureView from 'components/PictureView.svelte';
 	import EditingPanel from 'components/EditingPanel.svelte';
-	import { saveFilters, loadFilters, deleteFilters, getDefaultFilters } from '$lib/storage';
+	import { saveFilters, loadFilters, deleteFilters, getDefaultFilters, type FilterSettings } from '$lib/storage';
 
-	// State for the currently selected image to be displayed in the center view
-	let currentImage = $state<string | null>(null);
+	// State: Currently selected photo ID
+	let selectedPhotoId = $state<string | null>(null);
 
-	// Panel visibility state
+	// State: Panel visibility
 	let isLibraryOpen = $state(true);
 	let isEditingOpen = $state(true);
 
-	// State object holding all filter values (grouped by category as per Preset schema)
-	let filters = $state(getDefaultFilters());
+	// State: Filter settings for the currently selected photo
+	let filters = $state<FilterSettings>(getDefaultFilters());
 
+	// State: PIXI.js references (for histogram and export)
 	let filteredSprite = $state<PIXI.Sprite | null>(null);
 	let pixiRenderer = $state<PIXI.Renderer | null>(null);
 	let pixiApp = $state<PIXI.Application | null>(null);
 
-	// Handler to update the current image when a user selects one from the SelectionPanel
-	function handleSelectImage(img: string) {
-		if (currentImage === img) {
-			currentImage = null;
+	/**
+	 * Handle photo selection from the library
+	 * Loads saved filters if available, otherwise uses defaults
+	 */
+	function handlePhotoSelect(photoId: string) {
+		// Toggle off if clicking the same photo
+		if (selectedPhotoId === photoId) {
+			selectedPhotoId = null;
 			filters = getDefaultFilters();
 			return;
-		} else {
-			currentImage = img;
 		}
 
-		// Load saved filters for this image, or use defaults
-		const savedFilters = loadFilters(img);
+		selectedPhotoId = photoId;
+
+		// Load saved filters for this photo, or use defaults
+		const savedFilters = loadFilters(photoId);
 		if (savedFilters) {
 			filters = savedFilters;
 		} else {
@@ -39,54 +43,65 @@
 		}
 	}
 
-	// Handler to clear the current view if the selected image is deleted
-	function handleDeleteImage(img: string) {
-		// Delete saved filters for this image
-		deleteFilters(img);
+	/**
+	 * Handle photo deletion from the library
+	 * Cleans up saved filters and resets selection if needed
+	 */
+	function handlePhotoDelete(photoId: string) {
+		// Delete saved filters for this photo
+		deleteFilters(photoId);
 
-		if (currentImage === img) {
-			currentImage = null;
+		// Clear selection if the deleted photo was selected
+		if (selectedPhotoId === photoId) {
+			selectedPhotoId = null;
 			filters = getDefaultFilters();
 		}
 	}
 
-	// Auto-save filters whenever they change (debounced to avoid excessive writes)
+	/**
+	 * Auto-save filters whenever they change (debounced)
+	 * Saves filter state to localStorage for persistence
+	 */
 	let saveTimeout: number | null = null;
 	$effect(() => {
-		// Watch for filter changes
-		JSON.stringify(filters); // Track all filter properties
+		// Track filter changes by serializing
+		JSON.stringify(filters);
 
-		if (currentImage) {
-			// Debounce saves
+		if (selectedPhotoId) {
+			// Debounce saves to avoid excessive writes
 			if (saveTimeout) clearTimeout(saveTimeout);
 			saveTimeout = window.setTimeout(() => {
-				saveFilters(currentImage!, filters);
+				if (selectedPhotoId) {
+					saveFilters(selectedPhotoId, filters);
+				}
 			}, 500); // Save 500ms after last change
 		}
+
+		return () => {
+			if (saveTimeout) clearTimeout(saveTimeout);
+		};
 	});
 </script>
 
-<!-- Main Application Layout: Flex Container -->
+<!-- Main Application Layout -->
 <div class="flex h-screen w-screen overflow-hidden bg-black font-sans text-zinc-200">
-	<!-- Left Column: Selection Panel -->
-	<!-- Collapsible container with smooth width transition -->
+	<!-- Left Panel: Photo Library -->
 	<div
-		class="relative z-20 h-full flex-shrink-0 overflow-hidden border-r border-zinc-800 bg-zinc-900 shadow-xl transition-all duration-300 ease-in-out"
+		class="relative z-20 h-full shrink-0 overflow-hidden border-r border-zinc-800 bg-zinc-900 shadow-xl transition-all duration-300 ease-in-out"
 		style:width={isLibraryOpen ? '160px' : '0px'}
 	>
 		<div class="h-full w-[160px]">
 			<SelectionPanel
-				onSelect={handleSelectImage}
-				onDelete={handleDeleteImage}
-				selectedImage={currentImage}
+				onSelect={handlePhotoSelect}
+				onDelete={handlePhotoDelete}
+				selectedPhotoId={selectedPhotoId}
 			/>
 		</div>
 	</div>
 
-	<!-- Center Column: Picture View -->
-	<!-- Takes up remaining space. Contains floating toggle buttons. -->
+	<!-- Center Panel: Photo Viewer -->
 	<div class="relative z-10 h-full min-w-0 flex-1 bg-zinc-950 shadow-inner">
-		<!-- Floating Toggle Button for Library (Left) -->
+		<!-- Toggle Library Button (Left) -->
 		<button
 			onclick={() => (isLibraryOpen = !isLibraryOpen)}
 			class="absolute top-1/2 left-0 z-30 -translate-y-1/2 rounded-r-lg border-y border-r border-zinc-800 bg-zinc-900/50 p-1 text-zinc-500 backdrop-blur-sm transition-colors hover:bg-zinc-800 hover:text-white"
@@ -108,14 +123,20 @@
 			</svg>
 		</button>
 
-		<!-- Picture View Component -->
-		<PictureView photoId={currentImage} {filters} bind:filteredSprite bind:pixiRenderer bind:pixiApp />
+		<!-- Photo View Component -->
+		<PictureView
+			photoId={selectedPhotoId}
+			{filters}
+			bind:filteredSprite
+			bind:pixiRenderer
+			bind:pixiApp
+		/>
 
-		<!-- Floating Toggle Button for Editing (Right) -->
+		<!-- Toggle Editing Panel Button (Right) -->
 		<button
 			onclick={() => (isEditingOpen = !isEditingOpen)}
 			class="absolute top-1/2 right-0 z-30 -translate-y-1/2 rounded-l-lg border-y border-l border-zinc-800 bg-zinc-900/50 p-1 text-zinc-500 backdrop-blur-sm transition-colors hover:bg-zinc-800 hover:text-white"
-			aria-label="Toggle editing panel"
+			aria-label="Toggle Editing Panel"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -134,17 +155,13 @@
 		</button>
 	</div>
 
-	<!-- Right Column: Editing Panel -->
-	<!-- Collapsible container with smooth width transition -->
+	<!-- Right Panel: Editing Controls -->
 	<div
-		class="relative z-20 h-full flex-shrink-0 overflow-hidden border-l border-zinc-800 bg-zinc-900 shadow-xl transition-all duration-300 ease-in-out"
+		class="relative z-20 h-full shrink-0 overflow-hidden border-l border-zinc-800 bg-zinc-900 shadow-xl transition-all duration-300 ease-in-out"
 		style:width={isEditingOpen ? '320px' : '0px'}
 	>
 		<div class="h-full w-[320px]">
-			<EditingPanel 
-				bind:filters 
-				image={currentImage}
-			/>
+			<EditingPanel bind:filters photoId={selectedPhotoId} />
 		</div>
 	</div>
 </div>

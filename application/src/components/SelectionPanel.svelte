@@ -1,112 +1,153 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
+	import { exportMultipleImages } from '$lib/export';
+	import { PUBLIC_DEMO_USER } from '$env/static/public';
 
-	// Prop to notify parent component when an image is selected
-	// selectedImage: The currently selected image URL to highlight in the grid
-	// onDelete: key to notify parent when an image is removed
+	// Props
 	let {
 		onSelect,
-		onDelete = (img: string) => {},
-		onOpenAI = () => {},
-		selectedImage = null
+		onDelete = (photoId: string) => {},
+		selectedPhotoId = null
+	}: {
+		onSelect: (photoId: string) => void;
+		onDelete?: (photoId: string) => void;
+		selectedPhotoId: string | null;
 	} = $props();
-	import { exportMultipleImages } from '$lib/export';
 
-	type ImageItem = { photoId: string; previewURL: string };
+	// State: List of photo IDs from database
+	let photoIds = $state<string[]>([]);
+	let isLoading = $state(false);
+	let error = $state<string | null>(null);
 
-	// State to store the list of uploaded image strings (Data URLs)
-	let images = $state<string[]>([]);
-
-	// State to store images selected for export
+	// State: Photos selected for export
 	let selectedForExport = $state<Set<string>>(new Set());
 
-	// Export progress state
+	// State: Export progress
 	let isExporting = $state(false);
 	let exportProgress = $state({ current: 0, total: 0 });
 
-	// Reference to the hidden file input element
+	// Reference to hidden file input
 	let fileInput: HTMLInputElement | undefined;
 
-	const userId = env.PUBLIC_DEMO_USER;
-	console.log(userId);
+	/**
+	 * Fetch all photos for the demo user from the database
+	 */
+	async function fetchPhotos() {
+		isLoading = true;
+		error = null;
 
-	// Function to trigger the hidden file input click
-	function handleUpload() {
+		try {
+			const response = await fetch(`/api/photos/${PUBLIC_DEMO_USER}`);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch photos: ${response.statusText}`);
+			}
+
+			const data = await response.json();
+			photoIds = data.photos?.map((photo: { photoId: string }) => photo.photoId) || [];
+		} catch (err) {
+			console.error('Error fetching photos:', err);
+			error = err instanceof Error ? err.message : 'Failed to load photos';
+			photoIds = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	/**
+	 * Load photos on component mount
+	 */
+	$effect(() => {
+		fetchPhotos();
+	});
+
+	/**
+	 * Trigger file input click
+	 */
+	function handleUploadClick() {
 		fileInput?.click();
 	}
 
-	// Handler for when a file is selected from the file dialog
-	function onFileSelected(e: Event) {
+	/**
+	 * Handle file selection and upload
+	 */
+	async function handleFileSelected(e: Event) {
 		const target = e.target as HTMLInputElement;
-		if (target.files && target.files[0]) {
-			const file = target.files[0];
-			const reader = new FileReader();
-			// Read file as Data URL to display immediately
-			reader.onload = async (e) => {
-				if (!e.target?.result) return;
+		if (!target.files || !target.files[0]) return;
 
-				try {
-					const formData = new FormData();
-					formData.append('file', file);
-					formData.append('userId', userId);
+		const file = target.files[0];
+		isLoading = true;
+		error = null;
 
-					const res = await fetch('/api/photo/new', {
-						method: 'POST',
-						body: formData
-					});
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			formData.append('userId', PUBLIC_DEMO_USER);
 
-					if (!res.ok) {
-						console.error('Upload failed: ', await res.text());
-						return;
-					}
+			const response = await fetch('/api/photo/new', {
+				method: 'POST',
+				body: formData
+			});
 
-					const { photoId } = await res.json();
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(`Upload failed: ${errorText}`);
+			}
 
-					images = [...images, photoId];
-					onSelect(photoId);
-				} catch (err) {
-					console.error('Upload error', err);
-				}
-			};
-			reader.readAsDataURL(file);
+			const { photoId } = await response.json();
 
-			// Reset the file input to allow selecting the same file again
+			// Add to local state and select it
+			photoIds = [...photoIds, photoId];
+			onSelect(photoId);
+		} catch (err) {
+			console.error('Upload error:', err);
+			error = err instanceof Error ? err.message : 'Failed to upload photo';
+		} finally {
+			isLoading = false;
+			// Reset file input to allow selecting the same file again
 			target.value = '';
 		}
 	}
 
-	// Single click - toggle selection for export
-	function toggleExportSelection(img: string) {
+	/**
+	 * Toggle photo selection for export (single click)
+	 */
+	function toggleExportSelection(photoId: string) {
 		selectedForExport = new Set(selectedForExport);
-		if (selectedForExport.has(img)) {
-			selectedForExport.delete(img);
+		if (selectedForExport.has(photoId)) {
+			selectedForExport.delete(photoId);
 		} else {
-			selectedForExport.add(img);
+			selectedForExport.add(photoId);
 		}
 	}
 
-	// Double click - open in edit mode
-	function openForEdit(img: string) {
-		onSelect(img);
+	/**
+	 * Open photo for editing (double click)
+	 */
+	function openForEdit(photoId: string) {
+		onSelect(photoId);
 	}
 
-	// Click handler with double-click detection
+	/**
+	 * Handle image click with double-click detection
+	 */
 	let clickTimeout: number | null = null;
-	function handleImageClick(img: string) {
+	function handleImageClick(photoId: string) {
 		if (clickTimeout) {
 			// Double click detected
 			clearTimeout(clickTimeout);
 			clickTimeout = null;
-			openForEdit(img);
+			openForEdit(photoId);
 		} else {
 			// Single click - wait to see if it becomes a double click
 			clickTimeout = window.setTimeout(() => {
-				toggleExportSelection(img);
+				toggleExportSelection(photoId);
 				clickTimeout = null;
 			}, 250); // 250ms delay to detect double click
 		}
 	}
 
+	/**
+	 * Export selected photos
+	 */
 	async function handleExport() {
 		if (isExporting || selectedForExport.size === 0) return;
 
@@ -116,7 +157,7 @@
 		try {
 			await exportMultipleImages(
 				Array.from(selectedForExport),
-				'png', // or 'jpeg'
+				undefined, // Auto-detect format from original file
 				0.95,
 				(current, total) => {
 					exportProgress = { current, total };
@@ -125,78 +166,133 @@
 
 			// Clear selection after successful export
 			selectedForExport = new Set();
-		} catch (error) {
-			console.error('Export failed:', error);
+		} catch (err) {
+			console.error('Export failed:', err);
+			error = err instanceof Error ? err.message : 'Export failed';
 		} finally {
 			isExporting = false;
 			exportProgress = { current: 0, total: 0 };
 		}
 	}
 
-	// Function to remove an image from the list
-	function removeImage(e: MouseEvent, index: number) {
+	/**
+	 * Delete a photo from the library
+	 */
+	async function handleDeletePhoto(e: MouseEvent, photoId: string) {
 		e.stopPropagation(); // Prevent triggering selection
-		const removedImage = images[index]; // Capture image before removing
-		images = images.filter((_, i) => i !== index);
-		selectedForExport.delete(removedImage); // Remove from export selection
-		onDelete(removedImage); // Notify parent
+
+		try {
+			const response = await fetch(`/api/photo/${photoId}`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to delete photo');
+			}
+
+			// Remove from local state
+			photoIds = photoIds.filter((id) => id !== photoId);
+			selectedForExport.delete(photoId);
+			onDelete(photoId);
+		} catch (err) {
+			console.error('Delete error:', err);
+			error = err instanceof Error ? err.message : 'Failed to delete photo';
+		}
 	}
 </script>
 
 <div class="flex h-full w-full flex-col items-center border-r border-zinc-800 bg-zinc-900">
-	<!-- Header Section: Just Upload Icon -->
+	<!-- Header: Upload Button -->
 	<div
 		class="flex w-full flex-col items-center justify-center gap-2 border-b border-zinc-800 bg-zinc-900/90 py-4 backdrop-blur-sm"
 	>
 		<button
-			onclick={handleUpload}
-			class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-md transition-colors hover:bg-zinc-300"
+			onclick={handleUploadClick}
+			class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-md transition-colors hover:bg-zinc-300 disabled:opacity-50"
 			title="Upload Photo"
+			disabled={isLoading}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				class="size-5"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-				/>
-			</svg>
+			{#if isLoading}
+				<svg class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
+				</svg>
+			{:else}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="size-5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+					/>
+				</svg>
+			{/if}
 		</button>
 	</div>
 
-	<!-- Gallery Grid Section (Single Column) -->
+	<!-- Error Message -->
+	{#if error}
+		<div class="w-full border-b border-red-800 bg-red-900/20 px-2 py-2 text-xs text-red-400">
+			{error}
+		</div>
+	{/if}
+
+	<!-- Gallery Grid -->
 	<div class="custom-scrollbar w-full flex-1 overflow-y-auto px-2 py-4">
-		{#if images.length === 0}
+		{#if isLoading && photoIds.length === 0}
+			<!-- Loading State -->
+			<div class="flex flex-col items-center justify-center gap-2 pt-8 opacity-50">
+				<svg class="h-8 w-8 animate-spin text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
+				</svg>
+				<p class="text-xs text-zinc-500">Loading photos...</p>
+			</div>
+		{:else if photoIds.length === 0}
 			<!-- Empty State -->
 			<div class="flex flex-col items-center justify-center gap-2 pt-4 opacity-50">
 				<div class="h-10 w-10 rounded-full border border-dashed border-zinc-600"></div>
+				<p class="text-xs text-zinc-500">No photos yet</p>
 			</div>
 		{:else}
-			<!-- Image Grid -->
+			<!-- Photo Grid -->
 			<div class="flex w-full flex-col items-center gap-3">
-				{#each images as img, i}
+				{#each photoIds as photoId}
 					<div class="group relative shrink-0">
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
-							class:border-white={img === selectedImage}
-							class:ring-2={img === selectedImage || selectedForExport.has(img)}
-							class:ring-white={img === selectedImage}
-							class:border-blue-500={selectedForExport.has(img) && img !== selectedImage}
-							class:ring-blue-500={selectedForExport.has(img) && img !== selectedImage}
-							class:border-zinc-800={img !== selectedImage && !selectedForExport.has(img)}
-							class:hover:border-white={img !== selectedImage}
-							onclick={() => handleImageClick(img)}
+							class:border-white={photoId === selectedPhotoId}
+							class:ring-2={photoId === selectedPhotoId || selectedForExport.has(photoId)}
+							class:ring-white={photoId === selectedPhotoId}
+							class:border-blue-500={selectedForExport.has(photoId) && photoId !== selectedPhotoId}
+							class:ring-blue-500={selectedForExport.has(photoId) && photoId !== selectedPhotoId}
+							class:border-zinc-800={photoId !== selectedPhotoId && !selectedForExport.has(photoId)}
+							class:hover:border-white={photoId !== selectedPhotoId}
+							onclick={() => handleImageClick(photoId)}
 						>
-							<img src={`/api/photo/${img}/file`} alt="Thumbnail" class="h-full w-full object-cover" />
+							<img
+								src={`/api/photo/${photoId}/file`}
+								alt=""
+								class="h-full w-full object-cover"
+								loading="lazy"
+							/>
 
 							<!-- Selection Checkmark -->
-							{#if selectedForExport.has(img)}
+							{#if selectedForExport.has(photoId)}
 								<div
 									class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg"
 								>
@@ -218,9 +314,9 @@
 
 						<!-- Delete Button (Visible on Hover) -->
 						<button
-							onclick={(e) => removeImage(e, i)}
-							class="absolute -top-1 -right-1 h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-2 ring-zinc-900 transition-transform group-hover:flex hover:scale-110"
-							title="Remove image"
+							onclick={(e) => handleDeletePhoto(e, photoId)}
+							class="absolute -top-1 -right-1 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-2 ring-zinc-900 transition-transform group-hover:flex hover:scale-110"
+							title="Delete photo"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -239,40 +335,14 @@
 		{/if}
 	</div>
 
-	<!-- Ai Agent and Export Button (Bottom) -->
+	<!-- Footer: Export Button -->
 	<div
 		class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm"
 	>
-		<!-- <button
-			onclick={onOpenAI}
-			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 text-white shadow-md transition-all hover:from-purple-500 hover:to-blue-500 active:scale-95"
-			title="AI Agent"
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="24"
-				height="24"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="lucide lucide-bot"
-			>
-				<path d="M12 8V4H8" />
-				<rect width="16" height="12" x="4" y="8" rx="2" />
-				<path d="M2 14h2" />
-				<path d="M20 14h2" />
-				<path d="M15 13v2" />
-				<path d="M9 13v2" />
-			</svg>
-			<span class="text-sm font-medium">AI Agent</span>
-		</button> -->
 		<button
 			onclick={handleExport}
 			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
-			title="Export selected images"
+			title="Export selected photos"
 			disabled={selectedForExport.size === 0 || isExporting}
 		>
 			{#if isExporting}
@@ -283,17 +353,14 @@
 					fill="none"
 					viewBox="0 0 24 24"
 				>
-					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-					></circle>
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 					<path
 						class="opacity-75"
 						fill="currentColor"
 						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 					></path>
 				</svg>
-				<span class="text-sm font-medium"
-					>Exporting {exportProgress.current}/{exportProgress.total}</span
-				>
+				<span class="text-sm font-medium">Exporting {exportProgress.current}/{exportProgress.total}</span>
 			{:else}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -305,8 +372,10 @@
 					stroke-width="2"
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					class="lucide lucide-arrow-right-from-line-icon lucide-arrow-right-from-line"
-					><path d="M3 5v14" /><path d="M21 12H7" /><path d="m15 18 6-6-6-6" />
+				>
+					<path d="M3 5v14" />
+					<path d="M21 12H7" />
+					<path d="m15 18 6-6-6-6" />
 				</svg>
 				<span class="text-sm font-medium"
 					>Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span
@@ -315,12 +384,12 @@
 		</button>
 	</div>
 
-	<!-- Hidden File Input for handling uploads -->
+	<!-- Hidden File Input -->
 	<input
 		bind:this={fileInput}
 		type="file"
 		accept="image/*"
 		class="hidden"
-		onchange={onFileSelected}
+		onchange={handleFileSelected}
 	/>
 </div>

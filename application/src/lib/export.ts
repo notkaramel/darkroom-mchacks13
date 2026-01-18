@@ -3,32 +3,93 @@ import { PhotoEditFilter } from './PhotoEditFilter';
 import { loadFilters, type FilterSettings } from './storage';
 
 /**
+ * Detect image format from file buffer magic bytes
+ * Returns 'png', 'jpeg', 'webp', or null if unknown
+ */
+async function detectImageFormat(blob: Blob): Promise<'png' | 'jpeg' | 'webp' | null> {
+	const arrayBuffer = await blob.slice(0, 12).arrayBuffer();
+	const bytes = new Uint8Array(arrayBuffer);
+
+	// PNG: 89 50 4E 47 0D 0A 1A 0A
+	if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+		return 'png';
+	}
+
+	// JPEG: FF D8 FF
+	if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+		return 'jpeg';
+	}
+
+	// WebP: RIFF ... WEBP
+	if (
+		bytes[0] === 0x52 &&
+		bytes[1] === 0x49 &&
+		bytes[2] === 0x46 &&
+		bytes[3] === 0x46 &&
+		bytes[8] === 0x57 &&
+		bytes[9] === 0x45 &&
+		bytes[10] === 0x42 &&
+		bytes[11] === 0x50
+	) {
+		return 'webp';
+	}
+
+	return null;
+}
+
+/**
  * Export an image with filters applied using Pixi.js
- * @param photoId - The photo ID to export (not a URL)
+ * Automatically detects and preserves the original file format
+ * @param photoId - The photo ID to export
  */
 export async function exportImageWithFilters(
 	photoId: string,
-	format: 'png' | 'jpeg' = 'png',
+	format?: 'png' | 'jpeg' | 'webp',
 	quality: number = 0.95
-): Promise<Blob | null> {
+): Promise<{ blob: Blob; extension: string } | null> {
 	let imageUrl: string | null = null;
-	
+
 	try {
 		// Fetch the image from API endpoint as a blob
 		const apiUrl = `/api/photo/${photoId}/file`;
 		const response = await fetch(apiUrl);
-		
+
 		if (!response.ok) {
 			throw new Error(`Failed to fetch image from ${apiUrl}: ${response.statusText}`);
 		}
-		
+
 		const imageBlob = await response.blob();
+
+		// Detect original format if not specified
+		let exportFormat: 'png' | 'jpeg' | 'webp' = format || 'png';
+		let extension = 'png';
+
+		if (!format) {
+			const detectedFormat = await detectImageFormat(imageBlob);
+			if (detectedFormat) {
+				exportFormat = detectedFormat;
+			}
+		}
+
+		// Set extension based on format
+		switch (exportFormat) {
+			case 'jpeg':
+				extension = 'jpg';
+				break;
+			case 'png':
+				extension = 'png';
+				break;
+			case 'webp':
+				extension = 'webp';
+				break;
+		}
+
 		imageUrl = URL.createObjectURL(imageBlob);
-		
+
 		// Create an Image element from the blob URL
 		const img = new Image();
 		img.crossOrigin = 'anonymous';
-		
+
 		// Wait for image to load
 		await new Promise<void>((resolve, reject) => {
 			img.onload = () => resolve();
@@ -114,16 +175,16 @@ export async function exportImageWithFilters(
 				filters.hsl.magenta.luminance / 333
 			);
 
-			// Lens Corrections: -100 to +100 -> -1 to +1
+			// Lens Corrections
 			photoEditFilter.distortion = filters.lens_corrections.distortion / 100;
 			photoEditFilter.chromaticAberration = filters.lens_corrections.chromatic_aberration / 100;
 			photoEditFilter.vignetting = filters.lens_corrections.vignetting / 100;
 
 			// Transform
-			photoEditFilter.rotation = filters.transform.rotate; // Direct degrees
-			photoEditFilter.vertical = filters.transform.vertical; // -100 to +100
-			photoEditFilter.horizontal = filters.transform.horizontal; // -100 to +100
-			photoEditFilter.perspective = filters.transform.perspective / 100; // -100 to +100 -> -1 to +1
+			photoEditFilter.rotation = filters.transform.rotate;
+			photoEditFilter.vertical = filters.transform.vertical;
+			photoEditFilter.horizontal = filters.transform.horizontal;
+			photoEditFilter.perspective = filters.transform.perspective / 100;
 
 			// Apply the filter to the sprite
 			sprite.filters = [photoEditFilter];
@@ -137,32 +198,49 @@ export async function exportImageWithFilters(
 
 		// Extract the image as blob using canvas
 		const canvas = app.renderer.canvas as HTMLCanvasElement;
+
+		// Determine MIME type based on format
+		let mimeType: string;
+		switch (exportFormat) {
+			case 'jpeg':
+				mimeType = 'image/jpeg';
+				break;
+			case 'png':
+				mimeType = 'image/png';
+				break;
+			case 'webp':
+				mimeType = 'image/webp';
+				break;
+			default:
+				mimeType = 'image/png';
+		}
+
 		const blob = await new Promise<Blob | null>((resolve) => {
-			canvas.toBlob(
-				(blob) => resolve(blob),
-				format === 'png' ? 'image/png' : 'image/jpeg',
-				quality
-			);
+			canvas.toBlob((blob) => resolve(blob), mimeType, quality);
 		});
 
 		// Clean up
 		texture.destroy(true);
 		app.destroy(true);
-		
+
 		// Revoke object URL
 		if (imageUrl) {
 			URL.revokeObjectURL(imageUrl);
 		}
 
-		return blob;
+		if (!blob) {
+			return null;
+		}
+
+		return { blob, extension };
 	} catch (error) {
 		console.error('Failed to export image:', error);
-		
+
 		// Clean up object URL on error
 		if (imageUrl) {
 			URL.revokeObjectURL(imageUrl);
 		}
-		
+
 		return null;
 	}
 }
@@ -183,11 +261,12 @@ export function downloadBlob(blob: Blob, filename: string): void {
 
 /**
  * Export multiple images with filters applied
+ * Automatically preserves original file format for each image
  * @param photoIds - Array of photo IDs to export
  */
 export async function exportMultipleImages(
 	photoIds: string[],
-	format: 'png' | 'jpeg' = 'png',
+	format?: 'png' | 'jpeg' | 'webp',
 	quality: number = 0.95,
 	onProgress?: (current: number, total: number) => void
 ): Promise<void> {
@@ -195,15 +274,14 @@ export async function exportMultipleImages(
 
 	for (const photoId of photoIds) {
 		try {
-			const blob = await exportImageWithFilters(photoId, format, quality);
+			const result = await exportImageWithFilters(photoId, format, quality);
 
-			if (blob) {
-				// Generate filename from timestamp and index
+			if (result) {
+				// Generate filename from timestamp and index, using detected extension
 				const timestamp = new Date().getTime();
-				const extension = format === 'png' ? 'png' : 'jpg';
-				const filename = `darkroom-export-${timestamp}-${processed + 1}.${extension}`;
+				const filename = `darkroom-export-${timestamp}-${processed + 1}.${result.extension}`;
 
-				downloadBlob(blob, filename);
+				downloadBlob(result.blob, filename);
 			}
 
 			processed++;

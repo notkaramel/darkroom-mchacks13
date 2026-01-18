@@ -63,6 +63,17 @@ uniform float uMagentaHue;
 uniform float uMagentaSat;
 uniform float uMagentaLum;
 
+// Lens Corrections
+uniform float uDistortion;
+uniform float uChromaticAberration;
+uniform float uVignetting;
+
+// Transform
+uniform float uRotation;
+uniform float uVertical;
+uniform float uHorizontal;
+uniform float uPerspective;
+
 // RGB to HSL conversion
 vec3 rgb2hsl(vec3 color) {
     float maxC = max(max(color.r, color.g), color.b);
@@ -214,9 +225,100 @@ vec3 applyColorMixer(vec3 hsl,
     return hsl;
 }
 
+// Apply barrel/pincushion distortion
+vec2 applyDistortion(vec2 coord, float amount) {
+    vec2 center = vec2(0.5, 0.5);
+    vec2 offset = coord - center;
+    float dist = length(offset);
+    float distortion = 1.0 + amount * dist * dist;
+    return center + offset * distortion;
+}
+
+// Apply chromatic aberration (RGB channel shifting)
+vec3 applyChromaticAberration(vec2 coord, float amount) {
+    vec2 center = vec2(0.5, 0.5);
+    vec2 direction = normalize(coord - center);
+    float dist = length(coord - center);
+    
+    // Shift each channel slightly
+    vec2 redCoord = coord - direction * amount * dist * 0.01;
+    vec2 greenCoord = coord;
+    vec2 blueCoord = coord + direction * amount * dist * 0.01;
+    
+    float r = texture2D(uTexture, redCoord).r;
+    float g = texture2D(uTexture, greenCoord).g;
+    float b = texture2D(uTexture, blueCoord).b;
+    
+    return vec3(r, g, b);
+}
+
+// Apply vignetting effect
+vec3 applyVignetting(vec3 color, vec2 coord, float amount) {
+    vec2 center = vec2(0.5, 0.5);
+    float dist = distance(coord, center);
+    float vignette = 1.0 - smoothstep(0.3, 0.8, dist) * abs(amount);
+    
+    if (amount < 0.0) {
+        // Negative vignetting (brighten edges)
+        vignette = 1.0 + smoothstep(0.3, 0.8, dist) * abs(amount);
+    }
+    
+    return color * vignette;
+}
+
+// 2D rotation matrix
+vec2 rotate2D(vec2 coord, float angle) {
+    vec2 center = vec2(0.5, 0.5);
+    coord -= center;
+    float s = sin(angle);
+    float c = cos(angle);
+    mat2 rotationMatrix = mat2(c, -s, s, c);
+    coord = rotationMatrix * coord;
+    return coord + center;
+}
+
 void main() {
-    vec4 color = texture2D(uTexture, vTextureCoord);
-    vec3 rgb = color.rgb;
+    vec2 coord = vTextureCoord;
+    
+    // Apply transform first (rotation, perspective)
+    if (abs(uRotation) > 0.001) {
+        float angleRad = radians(uRotation);
+        coord = rotate2D(coord, angleRad);
+    }
+    
+    // Apply perspective shifts
+    if (abs(uVertical) > 0.001 || abs(uHorizontal) > 0.001) {
+        coord.x += uHorizontal * 0.001 * (coord.y - 0.5);
+        coord.y += uVertical * 0.001 * (coord.x - 0.5);
+    }
+    
+    // Apply lens distortion
+    if (abs(uDistortion) > 0.001) {
+        coord = applyDistortion(coord, uDistortion * 0.5);
+    }
+    
+    // Check bounds after transformations
+    if (coord.x < 0.0 || coord.x > 1.0 || coord.y < 0.0 || coord.y > 1.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    
+    // Sample texture with chromatic aberration if enabled
+    vec3 rgb;
+    float alpha;
+    if (abs(uChromaticAberration) > 0.001) {
+        rgb = applyChromaticAberration(coord, uChromaticAberration);
+        alpha = texture2D(uTexture, coord).a;
+    } else {
+        vec4 texColor = texture2D(uTexture, coord);
+        rgb = texColor.rgb;
+        alpha = texColor.a;
+    }
+    
+    // Apply vignetting
+    if (abs(uVignetting) > 0.001) {
+        rgb = applyVignetting(rgb, vTextureCoord, uVignetting);
+    }
     
     // 1. Brightness (additive offset)
     rgb += uBrightness;
@@ -276,55 +378,64 @@ void main() {
     // Final clamp
     rgb = clamp(rgb, 0.0, 1.0);
     
-    gl_FragColor = vec4(rgb, color.a);
+    gl_FragColor = vec4(rgb, alpha);
 }
 `;
 
 export class PhotoEditFilter extends Filter {
-	constructor() {
-		super({
-			glProgram: GlProgram.from({
-				vertex,
-				fragment
-			}),
-			resources: {
-				photoEditUniforms: {
-					uBrightness: { value: 0.0, type: 'f32' },
-					uContrast: { value: 0.0, type: 'f32' },
-					uHighlights: { value: 0.0, type: 'f32' },
-					uShadows: { value: 0.0, type: 'f32' },
-					uTemperature: { value: 0.0, type: 'f32' },
-					uTint: { value: 0.0, type: 'f32' },
-					uSaturation: { value: 0.0, type: 'f32' },
-					uVibrance: { value: 0.0, type: 'f32' },
-					uRedHue: { value: 0.0, type: 'f32' },
-					uRedSat: { value: 0.0, type: 'f32' },
-					uRedLum: { value: 0.0, type: 'f32' },
-					uOrangeHue: { value: 0.0, type: 'f32' },
-					uOrangeSat: { value: 0.0, type: 'f32' },
-					uOrangeLum: { value: 0.0, type: 'f32' },
-					uYellowHue: { value: 0.0, type: 'f32' },
-					uYellowSat: { value: 0.0, type: 'f32' },
-					uYellowLum: { value: 0.0, type: 'f32' },
-					uGreenHue: { value: 0.0, type: 'f32' },
-					uGreenSat: { value: 0.0, type: 'f32' },
-					uGreenLum: { value: 0.0, type: 'f32' },
-					uCyanHue: { value: 0.0, type: 'f32' },
-					uCyanSat: { value: 0.0, type: 'f32' },
-					uCyanLum: { value: 0.0, type: 'f32' },
-					uBlueHue: { value: 0.0, type: 'f32' },
-					uBlueSat: { value: 0.0, type: 'f32' },
-					uBlueLum: { value: 0.0, type: 'f32' },
-					uPurpleHue: { value: 0.0, type: 'f32' },
-					uPurpleSat: { value: 0.0, type: 'f32' },
-					uPurpleLum: { value: 0.0, type: 'f32' },
-					uMagentaHue: { value: 0.0, type: 'f32' },
-					uMagentaSat: { value: 0.0, type: 'f32' },
-					uMagentaLum: { value: 0.0, type: 'f32' }
-				}
-			}
-		});
-	}
+    constructor() {
+        super({
+            glProgram: GlProgram.from({
+                vertex,
+                fragment,
+            }),
+            resources: {
+                photoEditUniforms: {
+                    uBrightness: { value: 0.0, type: 'f32' },
+                    uContrast: { value: 0.0, type: 'f32' },
+                    uHighlights: { value: 0.0, type: 'f32' },
+                    uShadows: { value: 0.0, type: 'f32' },
+                    uTemperature: { value: 0.0, type: 'f32' },
+                    uTint: { value: 0.0, type: 'f32' },
+                    uSaturation: { value: 0.0, type: 'f32' },
+                    uVibrance: { value: 0.0, type: 'f32' },
+                    uRedHue: { value: 0.0, type: 'f32' },
+                    uRedSat: { value: 0.0, type: 'f32' },
+                    uRedLum: { value: 0.0, type: 'f32' },
+                    uOrangeHue: { value: 0.0, type: 'f32' },
+                    uOrangeSat: { value: 0.0, type: 'f32' },
+                    uOrangeLum: { value: 0.0, type: 'f32' },
+                    uYellowHue: { value: 0.0, type: 'f32' },
+                    uYellowSat: { value: 0.0, type: 'f32' },
+                    uYellowLum: { value: 0.0, type: 'f32' },
+                    uGreenHue: { value: 0.0, type: 'f32' },
+                    uGreenSat: { value: 0.0, type: 'f32' },
+                    uGreenLum: { value: 0.0, type: 'f32' },
+                    uCyanHue: { value: 0.0, type: 'f32' },
+                    uCyanSat: { value: 0.0, type: 'f32' },
+                    uCyanLum: { value: 0.0, type: 'f32' },
+                    uBlueHue: { value: 0.0, type: 'f32' },
+                    uBlueSat: { value: 0.0, type: 'f32' },
+                    uBlueLum: { value: 0.0, type: 'f32' },
+                    uPurpleHue: { value: 0.0, type: 'f32' },
+                    uPurpleSat: { value: 0.0, type: 'f32' },
+                    uPurpleLum: { value: 0.0, type: 'f32' },
+                    uMagentaHue: { value: 0.0, type: 'f32' },
+                    uMagentaSat: { value: 0.0, type: 'f32' },
+                    uMagentaLum: { value: 0.0, type: 'f32' },
+                    // Lens corrections
+                    uDistortion: { value: 0.0, type: 'f32' },
+                    uChromaticAberration: { value: 0.0, type: 'f32' },
+                    uVignetting: { value: 0.0, type: 'f32' },
+                    // Transform
+                    uRotation: { value: 0.0, type: 'f32' },
+                    uVertical: { value: 0.0, type: 'f32' },
+                    uHorizontal: { value: 0.0, type: 'f32' },
+                    uPerspective: { value: 0.0, type: 'f32' }
+                }
+            }
+        });
+    }
 
 	// Basic adjustments
 	get brightness(): number {
@@ -432,10 +543,61 @@ export class PhotoEditFilter extends Filter {
 		this.resources.photoEditUniforms.uniforms.uPurpleLum = lum;
 	}
 
-	// HSL Per-Color: Magenta
-	setMagentaHSL(hue: number, sat: number, lum: number) {
-		this.resources.photoEditUniforms.uniforms.uMagentaHue = hue;
-		this.resources.photoEditUniforms.uniforms.uMagentaSat = sat;
-		this.resources.photoEditUniforms.uniforms.uMagentaLum = lum;
-	}
+    // HSL Per-Color: Magenta
+    setMagentaHSL(hue: number, sat: number, lum: number) {
+        this.resources.photoEditUniforms.uniforms.uMagentaHue = hue;
+        this.resources.photoEditUniforms.uniforms.uMagentaSat = sat;
+        this.resources.photoEditUniforms.uniforms.uMagentaLum = lum;
+    }
+
+    // Lens Corrections
+    get distortion(): number {
+        return this.resources.photoEditUniforms.uniforms.uDistortion;
+    }
+    set distortion(value: number) {
+        this.resources.photoEditUniforms.uniforms.uDistortion = value;
+    }
+
+    get chromaticAberration(): number {
+        return this.resources.photoEditUniforms.uniforms.uChromaticAberration;
+    }
+    set chromaticAberration(value: number) {
+        this.resources.photoEditUniforms.uniforms.uChromaticAberration = value;
+    }
+
+    get vignetting(): number {
+        return this.resources.photoEditUniforms.uniforms.uVignetting;
+    }
+    set vignetting(value: number) {
+        this.resources.photoEditUniforms.uniforms.uVignetting = value;
+    }
+
+    // Transform
+    get rotation(): number {
+        return this.resources.photoEditUniforms.uniforms.uRotation;
+    }
+    set rotation(value: number) {
+        this.resources.photoEditUniforms.uniforms.uRotation = value;
+    }
+
+    get vertical(): number {
+        return this.resources.photoEditUniforms.uniforms.uVertical;
+    }
+    set vertical(value: number) {
+        this.resources.photoEditUniforms.uniforms.uVertical = value;
+    }
+
+    get horizontal(): number {
+        return this.resources.photoEditUniforms.uniforms.uHorizontal;
+    }
+    set horizontal(value: number) {
+        this.resources.photoEditUniforms.uniforms.uHorizontal = value;
+    }
+
+    get perspective(): number {
+        return this.resources.photoEditUniforms.uniforms.uPerspective;
+    }
+    set perspective(value: number) {
+        this.resources.photoEditUniforms.uniforms.uPerspective = value;
+    }
 }

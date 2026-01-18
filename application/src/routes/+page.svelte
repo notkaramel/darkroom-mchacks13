@@ -1,9 +1,10 @@
 <script lang="ts">
 	// Import the three main panels of the application
+	import * as PIXI from 'pixi.js';
 	import SelectionPanel from 'components/SelectionPanel.svelte';
 	import PictureView from 'components/PictureView.svelte';
 	import EditingPanel from 'components/EditingPanel.svelte';
-	import Section from 'components/editing/Section.svelte';
+	import { saveFilters, loadFilters, deleteFilters, getDefaultFilters } from '$lib/storage';
 
 	// State for the currently selected image to be displayed in the center view
 	let currentImage = $state<string | null>(null);
@@ -13,53 +14,55 @@
 	let isEditingOpen = $state(true);
 
 	// State object holding all filter values (grouped by category as per Preset schema)
-	let filters = $state({
-		basic: {
-			brightness: 0,
-			contrast: 0,
-			highlight: 0,
-			shadow: 0
-		},
-		color: {
-			temperature: 0,
-			tint: 0,
-			vibrance: 0,
-			saturation: 0
-		},
-		hsl: {
-			red: { hue: 0, saturation: 0, luminance: 0 },
-			orange: { hue: 0, saturation: 0, luminance: 0 },
-			yellow: { hue: 0, saturation: 0, luminance: 0 },
-			green: { hue: 0, saturation: 0, luminance: 0 },
-			cyan: { hue: 0, saturation: 0, luminance: 0 },
-			blue: { hue: 0, saturation: 0, luminance: 0 },
-			purple: { hue: 0, saturation: 0, luminance: 0 },
-			magenta: { hue: 0, saturation: 0, luminance: 0 }
-		},
-		lens_corrections: {
-			distortion: 0,
-			chromatic_aberration: 0,
-			vignetting: 0
-		},
-		transform: {
-			rotate: 0,
-			vertical: 0,
-			horizontal: 0,
-			perspective: 0
-		}
-	});
+	let filters = $state(getDefaultFilters());
+
+	let filteredSprite = $state<PIXI.Sprite | null>(null);
 
 	// Handler to update the current image when a user selects one from the SelectionPanel
 	function handleSelectImage(img: string) {
-		currentImage = img;
+		if (currentImage === img){
+			currentImage = null;
+			filters = getDefaultFilters();
+			return;
+		} else {
+			currentImage = img;
+		}
+		
+		// Load saved filters for this image, or use defaults
+		const savedFilters = loadFilters(img);
+		if (savedFilters) {
+			filters = savedFilters;
+		} else {
+			filters = getDefaultFilters();
+		}
 	}
 
 	// Handler to clear the current view if the selected image is deleted
 	function handleDeleteImage(img: string) {
+		// Delete saved filters for this image
+		deleteFilters(img);
+		
 		if (currentImage === img) {
 			currentImage = null;
+			filters = getDefaultFilters();
 		}
 	}
+
+	// Auto-save filters whenever they change (debounced to avoid excessive writes)
+	let saveTimeout: number | null = null;
+	$effect(() => {
+		// Watch for filter changes
+		JSON.stringify(filters); // Track all filter properties
+		
+		if (currentImage) {
+			// Debounce saves
+			if (saveTimeout) clearTimeout(saveTimeout);
+			saveTimeout = window.setTimeout(() => {
+				saveFilters(currentImage!, filters);
+			}, 500); // Save 500ms after last change
+		}
+	});
+	
 </script>
 
 <!-- Main Application Layout: Flex Container -->
@@ -75,6 +78,7 @@
 				onSelect={handleSelectImage}
 				onDelete={handleDeleteImage}
 				selectedImage={currentImage}
+				
 			/>
 		</div>
 	</div>
@@ -105,7 +109,7 @@
 		</button>
 
 		<!-- Picture View Component -->
-		<PictureView image={currentImage} {filters} />
+		<PictureView image={currentImage} {filters} bind:filteredSprite />
 
 		<!-- Floating Toggle Button for Editing (Right) -->
 		<button
@@ -137,7 +141,7 @@
 		style:width={isEditingOpen ? '320px' : '0px'}
 	>
 		<div class="h-full w-[320px]">
-			<EditingPanel bind:filters image={currentImage} />
+			<EditingPanel bind:filters image={filteredSprite} />
 		</div>
 	</div>
 </div>

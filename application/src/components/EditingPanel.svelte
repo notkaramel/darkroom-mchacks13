@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Slider from 'components/editing/Slider.svelte';
 	import Section from 'components/editing/Section.svelte';
+	import Histogram from 'components/editing/Histogram.svelte';
 
 	// Bindable prop to allow two-way state update with the parent
 	let { filters = $bindable(), image = null } = $props();
@@ -17,7 +18,9 @@
 	let expanded = $state({
 		basic: true,
 		color: true,
-		hsl: true
+		hsl: true,
+		lens: false,
+		transform: false
 	});
 
 	const hslColors = [
@@ -50,13 +53,6 @@
 			transform: { rotate: 0, vertical: 0, horizontal: 0, perspective: 0 }
 		};
 	}
-
-	// Auto-reset filters when image changes or becomes null
-	$effect(() => {
-		// This will re-run whenever `image` changes
-		image; // Reference image to track it
-		reset();
-	});
 </script>
 
 <div
@@ -72,6 +68,13 @@
 			Reset All
 		</button>
 	</div>
+
+	<!-- Histogram -->
+	{#if !isLocked}
+		<div class="mb-6">
+			<Histogram imageData={image} />
+		</div>
+	{/if}
 
 	<!-- Sliders Container -->
 	<div class="space-y-6 pb-10">
@@ -139,6 +142,21 @@
 				bind:value={filters.hsl[activeHslColor].luminance}
 				lock={isLocked}
 			/>
+		</Section>
+
+		<!-- Lens Corrections Section -->
+		<Section title="Lens" bind:isExpanded={expanded.lens}>
+			<Slider label="Distortion" bind:value={filters.lens_corrections.distortion} lock={isLocked} />
+			<Slider label="Chromatic Aberration" bind:value={filters.lens_corrections.chromatic_aberration} lock={isLocked} />
+			<Slider label="Vignetting" bind:value={filters.lens_corrections.vignetting} lock={isLocked} />
+		</Section>
+
+		<!-- Transform Section -->
+		<Section title="Transform" bind:isExpanded={expanded.transform}>
+			<Slider label="Rotate" bind:value={filters.transform.rotate} min={-180} max={180} lock={isLocked} />
+			<Slider label="Vertical" bind:value={filters.transform.vertical} lock={isLocked} />
+			<Slider label="Horizontal" bind:value={filters.transform.horizontal} lock={isLocked} />
+			<Slider label="Perspective" bind:value={filters.transform.perspective} lock={isLocked} />
 		</Section>
 	</div>
 </div>

@@ -131,6 +131,12 @@
 			bind:pixiRenderer
 			bind:pixiApp
 		/>
+<!-- Top center text -->
+		<div class="absolute top-0 left-0 right-0">
+			<p class="text-center text-xs text-zinc-500 py-4">
+				Powered by DigitalOcean and MongoDB Atlas 🍁
+			</p>
+		</div>
 
 		<!-- Toggle Editing Panel Button (Right) -->
 		<button

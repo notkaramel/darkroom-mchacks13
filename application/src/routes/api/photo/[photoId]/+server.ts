@@ -26,18 +26,14 @@ export const GET: RequestHandler = async ({ params }) => {
 			return json({ error: 'Photo not found' }, { status: 404 });
 		}
 
-		// Return photo data (excluding the file buffer for JSON response, or include it if needed)
-		// If you want to return the image, you might want to return it as base64 or as a separate endpoint
-		return json(
-			{
-				photoId: photo.photoId,
-				changes: photo.changes,
-				fileSize: photo.file.length,
-				createdAt: photo.createdAt,
-				updatedAt: photo.updatedAt
-			},
-			{ status: 200 }
-		);
+		//Return actual image bytes
+		return new Response(photo.file, {
+			headers: {
+				'Content-Type': 'image/jpeg',
+				'Cache-Control': 'no-store'
+			}
+		});
+
 	} catch (error) {
 		console.error('Error fetching photo:', error);
 		return json({ error: 'Internal server error' }, { status: 500 });

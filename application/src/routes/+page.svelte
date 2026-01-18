@@ -137,7 +137,7 @@
 		style:width={isEditingOpen ? '320px' : '0px'}
 	>
 		<div class="h-full w-[320px]">
-			<EditingPanel bind:filters />
+			<EditingPanel bind:filters image={currentImage} />
 		</div>
 	</div>
 </div>

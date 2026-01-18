@@ -98,7 +98,7 @@
 						<!-- Delete Button (Visible on Hover) -->
 						<button
 							onclick={(e) => removeImage(e, i)}
-							class="absolute -top-1 -right-1 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-2 ring-zinc-900 transition-transform group-hover:flex hover:scale-110"
+							class="absolute -top-1 -right-1 h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm ring-2 ring-zinc-900 transition-transform group-hover:flex hover:scale-110"
 							title="Remove image"
 						>
 							<svg

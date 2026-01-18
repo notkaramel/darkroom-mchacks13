@@ -10,7 +10,7 @@
     let colorFilter: PIXI.ColorMatrixFilter | null = null;
     let maskGraphics: PIXI.Graphics | null = null;
     
-    let splitPosition = $state(0.5);
+    let splitPosition = $state(0);
     let isInitialized = $state(false);
 
     $effect(() => {
@@ -148,14 +148,14 @@
             {splitPosition === 0 ? 'Show Filtered' : 'Show Original'}
         </button>
         
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-zinc-900/80 backdrop-blur-md rounded-full px-6 py-3 border border-white/10">
+        <div class="absolute flex items-center justify-center bottom-4 left-1/2 -translate-x-1/2 z-10 bg-zinc-900/80 backdrop-blur-md rounded-full p-6 border border-white/10">
             <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.01"
                 bind:value={splitPosition}
-                class="w-48"
+                class="w-48 slider cursor-pointer"
             />
         </div>
         

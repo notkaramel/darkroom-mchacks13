@@ -1,5 +1,5 @@
 <script lang="ts">
-    let { label, value = $bindable(), min = -100, max = 100 } = $props();
+    let { label, value = $bindable(), min = -100, max = 100, step = 1 } = $props();
 </script>
 
 <div class="group">
@@ -9,9 +9,11 @@
     </div>
     <input 
         type="range" 
-        class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white" 
+        class="slider w-full cursor-pointer" 
         {min} 
         {max} 
+        step={step}
         bind:value
     />
 </div>
+

@@ -1,14 +1,21 @@
 <script lang="ts">
+	import { env } from '$env/dynamic/public';
+
 	// Prop to notify parent component when an image is selected
 	// selectedImage: The currently selected image URL to highlight in the grid
 	// onDelete: key to notify parent when an image is removed
 	let { onSelect, onDelete = (img: string) => {}, selectedImage = null } = $props();
 
+	type ImageItem = { photoId: string; previewURL: string };
+
 	// State to store the list of uploaded image strings (Data URLs)
-	let images = $state<string[]>([]);
+	let images = $state<ImageItem[]>([]);
 
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
+
+	const userId = env.PUBLIC_DEMO_USER;
+	console.log(userId);
 
 	// Function to trigger the hidden file input click
 	function handleUpload() {
@@ -23,29 +30,38 @@
 			const reader = new FileReader();
 
 			// Read file as Data URL to display immediately
-			reader.onload = (e) => {
-				if (e.target?.result) {
-					const result = e.target.result as string;
-					// Add new image to the list
-					images = [...images, result];
-					// Automatically select the newly uploaded image
-					onSelect(result);
+			reader.onload = async (e) => {
+				if (!e.target?.result) return;
 
-					// TODO: Upload photo to database API should be called here
-					// Call POST /api/photo/new with the file buffer
-					// Example:
-					// const formData = new FormData();
-					// formData.append('file', file);
-					// const response = await fetch('/api/photo/new', {
-					// 	method: 'POST',
-					// 	body: file  // Send the file as binary data
-					// });
-					// const { photoId } = await response.json();
-					// Store the photoId for future reference if needed
+				const previewURL = e.target.result as string;
+
+				try {
+					const formData = new FormData();
+					formData.append('file', file);
+					formData.append('userId', userId);
+
+					const res = await fetch('/api/photo/new', {
+						method: 'POST',
+						body: formData
+					});
+
+					if (!res.ok) {
+						console.error('Upload failed: ', await res.text());
+						return;
+					}
+
+					const { photoId } = await res.json();
+
+					const item: ImageItem = { photoId, previewURL };
+					images = [...images, item];
+
+					onSelect(photoId);
+				} catch (err) {
+					console.error('Upload error', err);
 				}
 			};
 			reader.readAsDataURL(file);
-			
+
 			// Reset the file input to allow selecting the same file again
 			target.value = '';
 		}
@@ -55,7 +71,7 @@
 		e.stopPropagation(); // Prevent triggering selection
 		const removedImage = images[index]; // Capture image before removing
 		images = images.filter((_, i) => i !== index);
-		onDelete(removedImage); // Notify parent
+		onDelete(removedImage.photoId); // Notify parent
 	}
 </script>
 
@@ -100,14 +116,14 @@
 					<div class="group relative shrink-0">
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
-							class:border-white={img === selectedImage}
-							class:ring-1={img === selectedImage}
-							class:ring-white={img === selectedImage}
-							class:border-zinc-800={img !== selectedImage}
-							class:hover:border-white={img !== selectedImage}
-							onclick={() => onSelect(img)}
+							class:border-white={img.photoId === selectedImage}
+							class:ring-1={img.photoId === selectedImage}
+							class:ring-white={img.photoId === selectedImage}
+							class:border-zinc-800={img.photoId !== selectedImage}
+							class:hover:border-white={img.photoId !== selectedImage}
+							onclick={() => onSelect(img.photoId)}
 						>
-							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
+							<img src={img.previewURL} alt="Thumbnail" class="h-full w-full object-cover" />
 						</button>
 
 						<!-- Delete Button (Visible on Hover) -->

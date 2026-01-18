@@ -129,8 +129,16 @@
 
 			<!-- HSL Sliders for Active Color -->
 			<Slider label="Hue" bind:value={filters.hsl[activeHslColor].hue} lock={isLocked} />
-			<Slider label="Saturation" bind:value={filters.hsl[activeHslColor].saturation} lock={isLocked} />
-			<Slider label="Luminance" bind:value={filters.hsl[activeHslColor].luminance} lock={isLocked} />
+			<Slider
+				label="Saturation"
+				bind:value={filters.hsl[activeHslColor].saturation}
+				lock={isLocked}
+			/>
+			<Slider
+				label="Luminance"
+				bind:value={filters.hsl[activeHslColor].luminance}
+				lock={isLocked}
+			/>
 		</Section>
 	</div>
 </div>

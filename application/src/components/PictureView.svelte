@@ -110,7 +110,7 @@
 
 			const containerWidth = canvasContainer.clientWidth;
 			const containerHeight = canvasContainer.clientHeight;
-			
+
 			// Calculate scale to fit container
 			const scaleX = containerWidth / app.canvas.width;
 			const scaleY = containerHeight / app.canvas.height;
@@ -165,13 +165,41 @@
 		// Saturation: -100 to +100 -> -1 to +1
 		// Luminance: -100 to +100 -> -0.3 to +0.3
 		photoEditFilter.setRedHSL(hsl.red.hue / 200, hsl.red.saturation / 100, hsl.red.luminance / 333);
-		photoEditFilter.setOrangeHSL(hsl.orange.hue / 200, hsl.orange.saturation / 100, hsl.orange.luminance / 333);
-		photoEditFilter.setYellowHSL(hsl.yellow.hue / 200, hsl.yellow.saturation / 100, hsl.yellow.luminance / 333);
-		photoEditFilter.setGreenHSL(hsl.green.hue / 200, hsl.green.saturation / 100, hsl.green.luminance / 333);
-		photoEditFilter.setCyanHSL(hsl.cyan.hue / 200, hsl.cyan.saturation / 100, hsl.cyan.luminance / 333);
-		photoEditFilter.setBlueHSL(hsl.blue.hue / 200, hsl.blue.saturation / 100, hsl.blue.luminance / 333);
-		photoEditFilter.setPurpleHSL(hsl.purple.hue / 200, hsl.purple.saturation / 100, hsl.purple.luminance / 333);
-		photoEditFilter.setMagentaHSL(hsl.magenta.hue / 200, hsl.magenta.saturation / 100, hsl.magenta.luminance / 333);
+		photoEditFilter.setOrangeHSL(
+			hsl.orange.hue / 200,
+			hsl.orange.saturation / 100,
+			hsl.orange.luminance / 333
+		);
+		photoEditFilter.setYellowHSL(
+			hsl.yellow.hue / 200,
+			hsl.yellow.saturation / 100,
+			hsl.yellow.luminance / 333
+		);
+		photoEditFilter.setGreenHSL(
+			hsl.green.hue / 200,
+			hsl.green.saturation / 100,
+			hsl.green.luminance / 333
+		);
+		photoEditFilter.setCyanHSL(
+			hsl.cyan.hue / 200,
+			hsl.cyan.saturation / 100,
+			hsl.cyan.luminance / 333
+		);
+		photoEditFilter.setBlueHSL(
+			hsl.blue.hue / 200,
+			hsl.blue.saturation / 100,
+			hsl.blue.luminance / 333
+		);
+		photoEditFilter.setPurpleHSL(
+			hsl.purple.hue / 200,
+			hsl.purple.saturation / 100,
+			hsl.purple.luminance / 333
+		);
+		photoEditFilter.setMagentaHSL(
+			hsl.magenta.hue / 200,
+			hsl.magenta.saturation / 100,
+			hsl.magenta.luminance / 333
+		);
 	});
 
 	// Update mask when split position changes
@@ -196,48 +224,65 @@
 	};
 </script>
 
-<div class="relative flex flex-col h-full w-full items-center justify-center overflow-hidden bg-zinc-950 py-20 px-2">
-    {#if image}
-        <button
-            class="absolute top-4 left-4 z-10 rounded-full bg-zinc-900/80 px-4 py-2 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95 border border-white/10"
-            onclick={toggleSplit}
-        >
-            {splitPosition === 0 ? 'Show Filtered' : 'Show Original'}
-        </button>
-        
-        <div class="absolute flex items-center justify-center bottom-4 left-1/2 -translate-x-1/2 z-10 bg-zinc-900/80 backdrop-blur-md rounded-full p-6 border border-white/10">
-            <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                bind:value={splitPosition}
-                class="w-48 slider cursor-pointer "
-            />
-        </div>
-        
-        <div bind:this={canvasContainer} class="flex w-full h-full items-center justify-center"></div>
-    {:else}
-        <div class="flex flex-col items-center gap-4 text-zinc-600">
-            <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </div>
-            <p class="font-medium text-sm tracking-wide">Select an photo to start editing</p>
-        </div>
-    {/if}
+<div
+	class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-zinc-950 px-2 py-20"
+>
+	{#if image}
+		<button
+			class="absolute top-4 left-4 z-10 rounded-full border border-white/10 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95"
+			onclick={toggleSplit}
+		>
+			{splitPosition === 0 ? 'Show Filtered' : 'Show Original'}
+		</button>
+
+		<div
+			class="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center rounded-full border border-white/10 bg-zinc-900/80 p-6 backdrop-blur-md"
+		>
+			<input
+				type="range"
+				min="0"
+				max="1"
+				step="0.01"
+				bind:value={splitPosition}
+				class="slider w-48 cursor-pointer"
+			/>
+		</div>
+
+		<div bind:this={canvasContainer} class="flex h-full w-full items-center justify-center"></div>
+	{:else}
+		<div class="flex flex-col items-center gap-4 text-zinc-600">
+			<div
+				class="flex h-20 w-20 items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900 shadow-xl"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-8 w-8 opacity-50"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+					/>
+				</svg>
+			</div>
+			<p class="text-sm font-medium tracking-wide">Select an photo to start editing</p>
+		</div>
+	{/if}
 </div>
 
 <style>
-    .slider::-webkit-slider-runnable-track {
-        background: rgb(39 39 42); /* zinc-800 */
-    }
+	.slider::-webkit-slider-runnable-track {
+		background: rgb(39 39 42); /* zinc-800 */
+	}
 
-    /* Ensure canvas resizes smoothly */
-    :global(canvas) {
-        transition: none !important;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
-    }
+	/* Ensure canvas resizes smoothly */
+	:global(canvas) {
+		transition: none !important;
+		image-rendering: -webkit-optimize-contrast;
+		image-rendering: crisp-edges;
+	}
 </style>

@@ -3,6 +3,8 @@ import { MONGO_USERNAME, MONGO_PASSWORD } from '$env/static/private';
 import { Photo } from '$lib/models/Photo';
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { randomUUID } from 'crypto';
+import { User } from '$lib/models/User';
+import { Buffer } from 'node:buffer';
 
 const uri = `mongodb+srv://${MONGO_USERNAME}:${MONGO_PASSWORD}@darkroom-cluster.ffcj3de.mongodb.net/?appName=darkroom-cluster`;
 
@@ -12,9 +14,19 @@ async function connectDB() {
 	}
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, url }) => {
 	try {
 		await connectDB();
+
+		//get userId (username or _id) from query parameters
+		const userId = url.searchParams.get('userId');
+		if (!userId) { 
+			return json(
+	{ error: 'userId is required (use ?userId=...)' },
+	{ status: 400 }
+);
+
+		}
 
 		// Get the image buffer from the request
 		const arrayBuffer = await request.arrayBuffer();
@@ -71,8 +83,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		await photo.save();
 
 		// ADD PHOTO TO USER
+		const user = await User.findOneAndUpdate(
+			{ username: userId },
+			{ $addToSet: { photos: photoId }}, //prevents duplicates from happening
+			{ new: true }
+		);
+
+		if (!user) { 
+			//rollback: remove photo if the user does not exist
+			await Photo.deleteOne({ photoId });
+			return json({ error: 'User not found(upload rolled back)'}, { status: 404 });
+		}
 		
-		console.log('Photo created:', photo);
 		return json(
 			{ photoId: photo.photoId, message: 'Photo uploaded successfully' },
 			{ status: 201 }

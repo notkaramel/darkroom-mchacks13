@@ -70,6 +70,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		await photo.save();
 
+		// ADD PHOTO TO USER
+		
+		console.log('Photo created:', photo);
 		return json(
 			{ photoId: photo.photoId, message: 'Photo uploaded successfully' },
 			{ status: 201 }

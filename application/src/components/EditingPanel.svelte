@@ -3,7 +3,10 @@
 	import Section from 'components/editing/Section.svelte';
 
 	// Bindable prop to allow two-way state update with the parent
-	let { filters = $bindable() } = $props();
+	let { filters = $bindable(), image = null } = $props();
+
+	// Determine if sliders should be locked (no image loaded)
+	const isLocked = $derived(!image);
 
 	type HslColorKey = 'red' | 'orange' | 'yellow' | 'green' | 'cyan' | 'blue' | 'purple' | 'magenta';
 
@@ -47,6 +50,13 @@
 			transform: { rotate: 0, vertical: 0, horizontal: 0, perspective: 0 }
 		};
 	}
+
+	// Auto-reset filters when image changes or becomes null
+	$effect(() => {
+		// This will re-run whenever `image` changes
+		image; // Reference image to track it
+		reset();
+	});
 </script>
 
 <div
@@ -71,10 +81,11 @@
 				label="Brightness"
 				bind:value={filters.basic.brightness}
 				gradient="bg-gradient-to-r from-zinc-950 to-white"
+				lock={isLocked}
 			/>
-			<Slider label="Contrast" bind:value={filters.basic.contrast} />
-			<Slider label="Highlights" bind:value={filters.basic.highlight} />
-			<Slider label="Shadows" bind:value={filters.basic.shadow} />
+			<Slider label="Contrast" bind:value={filters.basic.contrast} lock={isLocked} />
+			<Slider label="Highlights" bind:value={filters.basic.highlight} lock={isLocked} />
+			<Slider label="Shadows" bind:value={filters.basic.shadow} lock={isLocked} />
 		</Section>
 
 		<!-- Color Section -->
@@ -83,20 +94,26 @@
 				label="Temp"
 				bind:value={filters.color.temperature}
 				gradient="bg-gradient-to-r from-blue-500 to-orange-500"
+				lock={isLocked}
 			/>
 			<Slider
 				label="Tint"
 				bind:value={filters.color.tint}
 				gradient="bg-gradient-to-r from-green-500 to-fuchsia-500"
+				lock={isLocked}
 			/>
-			<Slider label="Vibrance" bind:value={filters.color.vibrance} />
-			<Slider label="Saturation" bind:value={filters.color.saturation} />
+			<Slider label="Vibrance" bind:value={filters.color.vibrance} lock={isLocked} />
+			<Slider label="Saturation" bind:value={filters.color.saturation} lock={isLocked} />
 		</Section>
 
 		<!-- HSL Section -->
 		<Section title="HSL" bind:isExpanded={expanded.hsl}>
 			<!-- Color Selector -->
-			<div class="mb-6 flex justify-between px-1">
+			<div
+				class="mb-6 flex justify-between px-1"
+				class:opacity-50={isLocked}
+				class:pointer-events-none={isLocked}
+			>
 				{#each hslColors as { name, color }}
 					<button
 						class={`h-5 w-5 rounded-full ring-2 ring-offset-2 ring-offset-zinc-900 transition-all focus:outline-none ${color} ${activeHslColor === name ? 'scale-110 ring-white' : 'opacity-80 ring-transparent hover:scale-110 hover:opacity-100'}`}
@@ -105,14 +122,23 @@
 							activeHslColor = name;
 						}}
 						title={name.charAt(0).toUpperCase() + name.slice(1)}
+						disabled={isLocked}
 					></button>
 				{/each}
 			</div>
 
 			<!-- HSL Sliders for Active Color -->
-			<Slider label="Hue" bind:value={filters.hsl[activeHslColor].hue} />
-			<Slider label="Saturation" bind:value={filters.hsl[activeHslColor].saturation} />
-			<Slider label="Luminance" bind:value={filters.hsl[activeHslColor].luminance} />
+			<Slider label="Hue" bind:value={filters.hsl[activeHslColor].hue} lock={isLocked} />
+			<Slider
+				label="Saturation"
+				bind:value={filters.hsl[activeHslColor].saturation}
+				lock={isLocked}
+			/>
+			<Slider
+				label="Luminance"
+				bind:value={filters.hsl[activeHslColor].luminance}
+				lock={isLocked}
+			/>
 		</Section>
 	</div>
 </div>

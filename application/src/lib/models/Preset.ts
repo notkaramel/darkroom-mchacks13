@@ -5,74 +5,74 @@
  * most data values below will be relative values
  */
 
-import mongoose, { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from 'mongoose';
 
 export interface IPreset {
-  basic: {
-    brightness: Number;
-    contrast: Number;
-    highlight: Number;
-    shadow: Number;
-  }
-  color: {
-    temperature: Number;
-    tint: Number;
-    vibrance: Number;
-    saturation: Number;
-  }
-  hsl: {
-    red: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    orange: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    yellow: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    green: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    cyan: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    blue: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    purple: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-    magenta: {
-      hue: Number;
-      saturation: Number;
-      luminance: Number;
-    }
-  }
-  lens_corrections: {
-    distortion: Number;
-    chromatic_aberration: Number;
-    vignetting: Number;
-  }
-  transform: {
-    rotate: Number;
-    vertical: Number;
-    horizontal: Number;
-    perspective: Number;
-  }
+	basic: {
+		brightness: Number;
+		contrast: Number;
+		highlight: Number;
+		shadow: Number;
+	};
+	color: {
+		temperature: Number;
+		tint: Number;
+		vibrance: Number;
+		saturation: Number;
+	};
+	hsl: {
+		red: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		orange: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		yellow: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		green: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		cyan: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		blue: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		purple: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+		magenta: {
+			hue: Number;
+			saturation: Number;
+			luminance: Number;
+		};
+	};
+	lens_corrections: {
+		distortion: Number;
+		chromatic_aberration: Number;
+		vignetting: Number;
+	};
+	transform: {
+		rotate: Number;
+		vertical: Number;
+		horizontal: Number;
+		perspective: Number;
+	};
 }
 
 const presetSchema = new Schema<IPreset>(

@@ -70,7 +70,10 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		await photo.save();
 
-		return json({ photoId: photo.photoId, message: 'Photo uploaded successfully' }, { status: 201 });
+		return json(
+			{ photoId: photo.photoId, message: 'Photo uploaded successfully' },
+			{ status: 201 }
+		);
 	} catch (error) {
 		console.error('Error creating photo:', error);
 		if (error instanceof Error && error.name === 'ValidationError') {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 
-	let { title, isExpanded = $bindable(true) } = $props();
+	let { title, isExpanded = $bindable(true), children } = $props();
 </script>
 
 <div class="border-b border-zinc-800/50 pb-6 last:border-0 last:pb-0">
@@ -26,7 +26,7 @@
 
 	{#if isExpanded}
 		<div class="space-y-4" transition:slide={{ duration: 200 }}>
-			<slot />
+			{@render children()}
 		</div>
 	{/if}
 </div>

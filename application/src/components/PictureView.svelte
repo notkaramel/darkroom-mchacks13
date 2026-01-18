@@ -2,12 +2,13 @@
 	import * as PIXI from 'pixi.js';
 	import { PhotoEditFilter } from '$lib/PhotoEditFilter';
 
-	let { image = null, filters, filteredSprite = $bindable() } = $props();
+	let { photoId = null, filters, filteredSprite = $bindable() } = $props();
 
 	let canvasContainer = $state<HTMLDivElement>();
 
 	let app: PIXI.Application | null = null;
 	let originalSprite: PIXI.Sprite | null = null;
+	let loadedTexture: PIXI.Texture | null = null;
 
 	let photoEditFilter: PhotoEditFilter | null = null;
 	let maskGraphics: PIXI.Graphics | null = null;
@@ -16,9 +17,10 @@
 	let isInitialized = $state(false);
 
 	$effect(() => {
-		if (!image || !canvasContainer) return;
+		if (!photoId || !canvasContainer) return;
 
 		let mounted = true;
+		let imageUrl: string | null = null;
 
 		(async () => {
 			try {
@@ -38,23 +40,67 @@
 
 				canvasContainer.appendChild(app.canvas);
 
-				const texture = await PIXI.Assets.load(image);
+				// Construct the API endpoint URL with the photoId
+				const apiUrl = `/api/photo/${photoId}/file`;
+				
+				// Fetch the image from API endpoint as a blob
+				const response = await fetch(apiUrl);
+				if (!response.ok) {
+					throw new Error(`Failed to fetch image from ${apiUrl}: ${response.statusText}`);
+				}
+				const blob = await response.blob();
+				imageUrl = URL.createObjectURL(blob);
 
 				if (!mounted) {
+					URL.revokeObjectURL(imageUrl);
+					app.destroy(true);
+					return;
+				}
+
+				// Create an Image element from the blob URL (similar to how SelectionPanel works)
+				if (!imageUrl) {
+					throw new Error('Object URL not created');
+				}
+				
+				const img = new Image();
+				img.crossOrigin = 'anonymous';
+				
+				// Wait for image to load
+				await new Promise<void>((resolve, reject) => {
+					img.onload = () => resolve();
+					img.onerror = () => reject(new Error('Failed to load image'));
+					img.src = imageUrl!;
+				});
+
+				if (!mounted) {
+					URL.revokeObjectURL(imageUrl);
+					app.destroy(true);
+					return;
+				}
+
+				// Create texture from the loaded image
+				loadedTexture = PIXI.Texture.from(img);
+
+				if (!mounted || !loadedTexture) {
+					if (loadedTexture) {
+						loadedTexture.destroy(true);
+						loadedTexture = null;
+					}
+					URL.revokeObjectURL(imageUrl);
 					app.destroy(true);
 					return;
 				}
 
 				const scale = Math.min(
-					app.screen.width / texture.width,
-					app.screen.height / texture.height
+					app.screen.width / loadedTexture.width,
+					app.screen.height / loadedTexture.height
 				);
 
 				const centerX = app.screen.width / 2;
 				const centerY = app.screen.height / 2;
 
 				// Original sprite (left side - unfiltered)
-				originalSprite = new PIXI.Sprite(texture);
+				originalSprite = new PIXI.Sprite(loadedTexture);
 				originalSprite.anchor.set(0.5);
 				originalSprite.scale.set(scale);
 				originalSprite.x = centerX;
@@ -62,7 +108,7 @@
 				app.stage.addChild(originalSprite);
 
 				// Filtered sprite (right side - filtered)
-				filteredSprite = new PIXI.Sprite(texture);
+				filteredSprite = new PIXI.Sprite(loadedTexture);
 				filteredSprite.anchor.set(0.5);
 				filteredSprite.scale.set(scale);
 				filteredSprite.x = centerX;
@@ -82,12 +128,29 @@
 				updateMask();
 			} catch (error) {
 				console.error('Error initializing Pixi:', error);
+				// Clean up object URL if it was created before the error
+				if (imageUrl) {
+					URL.revokeObjectURL(imageUrl);
+					imageUrl = null;
+				}
 			}
 		})();
 
 		return () => {
 			mounted = false;
 			isInitialized = false;
+
+			// Clean up object URL if it exists
+			if (imageUrl) {
+				URL.revokeObjectURL(imageUrl);
+				imageUrl = null;
+			}
+
+			// Clean up texture before revoking object URL
+			if (loadedTexture) {
+				loadedTexture.destroy(true);
+				loadedTexture = null;
+			}
 
 			if (app) {
 				app.destroy(true);
@@ -238,7 +301,7 @@
 <div
 	class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-zinc-950 px-2 py-20"
 >
-	{#if image}
+	{#if photoId}
 		<button
 			class="absolute top-4 left-4 z-10 rounded-full border border-white/10 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95"
 			onclick={toggleSplit}

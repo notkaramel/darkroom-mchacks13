@@ -107,7 +107,7 @@
 		</button>
 
 		<!-- Picture View Component -->
-		<PictureView image={currentImage} {filters} bind:filteredSprite />
+		<PictureView photoId={currentImage} {filters} bind:filteredSprite />
 
 		<!-- Floating Toggle Button for Editing (Right) -->
 		<button

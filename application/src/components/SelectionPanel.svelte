@@ -193,7 +193,7 @@
 							class:hover:border-white={img !== selectedImage}
 							onclick={() => handleImageClick(img)}
 						>
-							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
+							<img src={`/api/photo/${img}/file`} alt="Thumbnail" class="h-full w-full object-cover" />
 
 							<!-- Selection Checkmark -->
 							{#if selectedForExport.has(img)}

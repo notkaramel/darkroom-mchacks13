@@ -6,6 +6,9 @@
 
 	// State to store the list of uploaded image strings (Data URLs)
 	let images = $state<string[]>([]);
+	
+	// State to store images selected for export
+	let selectedForExport = $state<Set<string>>(new Set());
 
 	// Reference to the hidden file input element
 	let fileInput: HTMLInputElement | undefined;
@@ -28,7 +31,7 @@
 					const result = e.target.result as string;
 					// Add new image to the list
 					images = [...images, result];
-					// Automatically select the newly uploaded image
+					// Automatically open the newly uploaded image in edit mode
 					onSelect(result);
 
 					// TODO: Upload photo to database API should be called here
@@ -50,11 +53,59 @@
 			target.value = '';
 		}
 	}
+
+	// Single click - toggle selection for export
+	function toggleExportSelection(img: string) {
+		selectedForExport = new Set(selectedForExport);
+		if (selectedForExport.has(img)) {
+			selectedForExport.delete(img);
+		} else {
+			selectedForExport.add(img);
+		}
+	}
+
+	// Double click - open in edit mode
+	function openForEdit(img: string) {
+		onSelect(img);
+	}
+
+	// Click handler with double-click detection
+	let clickTimeout: number | null = null;
+	function handleImageClick(img: string) {
+		if (clickTimeout) {
+			// Double click detected
+			clearTimeout(clickTimeout);
+			clickTimeout = null;
+			openForEdit(img);
+		} else {
+			// Single click - wait to see if it becomes a double click
+			clickTimeout = window.setTimeout(() => {
+				toggleExportSelection(img);
+				clickTimeout = null;
+			}, 250); // 250ms delay to detect double click
+		}
+	}
+
+	function handleExport() {
+		// TODO: Export the selected images
+		console.log('Exporting images:', Array.from(selectedForExport));
+		// Call POST /api/photo/export with the image data
+		// Example:
+		// const response = await fetch('/api/photo/export', {
+		// 	method: 'POST',
+		// 	body: JSON.stringify({ images: Array.from(selectedForExport) }),
+		// 	headers: { 'Content-Type': 'application/json' }
+		// });
+		// const { exportedImages } = await response.json();
+		// Store the exportedImages for future reference if needed
+	}
+	
 	// Function to remove an image from the list
 	function removeImage(e: MouseEvent, index: number) {
 		e.stopPropagation(); // Prevent triggering selection
 		const removedImage = images[index]; // Capture image before removing
 		images = images.filter((_, i) => i !== index);
+		selectedForExport.delete(removedImage); // Remove from export selection
 		onDelete(removedImage); // Notify parent
 	}
 </script>
@@ -103,13 +154,24 @@
 						<button
 							class="block h-20 w-20 overflow-hidden rounded-md border transition-all duration-200 focus:outline-none"
 							class:border-white={img === selectedImage}
-							class:ring-1={img === selectedImage}
+							class:ring-2={img === selectedImage || selectedForExport.has(img)}
 							class:ring-white={img === selectedImage}
-							class:border-zinc-800={img !== selectedImage}
+							class:border-blue-500={selectedForExport.has(img) && img !== selectedImage}
+							class:ring-blue-500={selectedForExport.has(img) && img !== selectedImage}
+							class:border-zinc-800={img !== selectedImage && !selectedForExport.has(img)}
 							class:hover:border-white={img !== selectedImage}
-							onclick={() => onSelect(img)}
+							onclick={() => handleImageClick(img)}
 						>
 							<img src={img} alt="Thumbnail" class="h-full w-full object-cover" />
+							
+							<!-- Selection Checkmark -->
+							{#if selectedForExport.has(img)}
+								<div class="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 shadow-lg">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 text-white">
+										<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+									</svg>
+								</div>
+							{/if}
 						</button>
 
 						<!-- Delete Button (Visible on Hover) -->
@@ -142,7 +204,7 @@
 
 	<!-- Ai Agent and Export Button (Bottom) -->
 	<div class="flex w-full flex-col gap-2 border-t border-zinc-800 bg-zinc-900/90 px-2 py-4 backdrop-blur-sm">
-		<button
+		<!-- <button
 			onclick={onOpenAI}
 			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 text-white shadow-md transition-all hover:from-purple-500 hover:to-blue-500 active:scale-95"
 			title="AI Agent"
@@ -167,11 +229,12 @@
 				<path d="M9 13v2" />
 			</svg>
 			<span class="text-sm font-medium">AI Agent</span>
-		</button>
+		</button> -->
 		<button
-			onclick={onExport}
-			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300"
-			title="Export"
+			onclick={handleExport}
+			class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-black shadow-md transition-colors hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+			title="Export selected images"
+			disabled={selectedForExport.size === 0}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -186,7 +249,7 @@
 				class="lucide lucide-arrow-right-from-line-icon lucide-arrow-right-from-line"
 				><path d="M3 5v14" /><path d="M21 12H7" /><path d="m15 18 6-6-6-6" />
 			</svg>
-			<span class="text-sm font-medium">Export</span>
+			<span class="text-sm font-medium">Export{selectedForExport.size > 0 ? ` (${selectedForExport.size})` : ''}</span>
 		</button>
 	</div>
 

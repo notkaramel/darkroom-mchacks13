@@ -12,7 +12,7 @@
 	let photoEditFilter: PhotoEditFilter | null = null;
 	let maskGraphics: PIXI.Graphics | null = null;
 
-	let splitPosition = $state(0.5);
+	let splitPosition = $state(0);
 	let isInitialized = $state(false);
 
 	$effect(() => {

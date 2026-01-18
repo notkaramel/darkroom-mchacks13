@@ -50,13 +50,6 @@
 			transform: { rotate: 0, vertical: 0, horizontal: 0, perspective: 0 }
 		};
 	}
-
-	// Auto-reset filters when image changes or becomes null
-	$effect(() => {
-		// This will re-run whenever `image` changes
-		image; // Reference image to track it
-		reset();
-	});
 </script>
 
 <div

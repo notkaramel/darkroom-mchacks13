@@ -1,90 +1,159 @@
 <script lang="ts">
-    // Props: 'image' is the data URL, 'filters' contains adjustment values
-    let { image = null, filters } = $props();
     import * as PIXI from 'pixi.js';
-    import { onMount } from 'svelte';
-
-    // Derived rune to construct the CSS filter string dynamically based on filter values
-    let filterString = $derived(`
-        brightness(${filters.brightness}%)
-        contrast(${filters.contrast}%)
-        saturate(${filters.saturation}%)
-        blur(${filters.blur}px)
-        grayscale(${filters.grayscale}%)
-        sepia(${filters.sepia}%)
-    `);
-   
-
-  let canvasContainer: HTMLDivElement;
-  let brightness = $state(1);
-  let contrast = $state(1);
-  let hue = $state(0);
-
-  let sprite: PIXI.Sprite | null = null;
-  let colorFilter = $state<PIXI.ColorMatrixFilter | null>(null);
-
-  onMount(() => {
-    let app: PIXI.Application;
     
-    (async () => {
-      app = new PIXI.Application();
-      
-      await app.init({
-        width: 1080,
-        height: 1080,
-        backgroundColor: 0x2c3e50,
-      });
-      
-      if (canvasContainer) {
-        canvasContainer.appendChild(app.canvas);
-      }
-      
-      const texture = await PIXI.Assets.load('/placeholder.png');
-      sprite = new PIXI.Sprite(texture);
-      sprite.anchor.set(0.5);
-      sprite.x = app.screen.width / 2;
-      sprite.y = app.screen.height / 2;
+    let { image = null, filters } = $props();
 
-      // Create single filter
-      colorFilter = new PIXI.ColorMatrixFilter();
-      sprite.filters = [colorFilter];
-
-      app.stage.addChild(sprite);
-    })();
+    let canvasContainer = $state<HTMLDivElement>();
+    let app: PIXI.Application | null = null;
+    let originalSprite: PIXI.Sprite | null = null;
+    let filteredSprite: PIXI.Sprite | null = null;
+    let colorFilter: PIXI.ColorMatrixFilter | null = null;
+    let maskGraphics: PIXI.Graphics | null = null;
     
-    return () => {
-      if (app) {
-        app.destroy(true);
-      }
-    };
-  });
+    let splitPosition = $state(0.5);
+    let isInitialized = $state(false);
 
-  // Update all filters together when any value changes
-  $effect(() => {
-    if (colorFilter) {
-      // Reset to identity matrix first
-      colorFilter.reset();
-      console.log(brightness, contrast, hue);
-      
-      // Apply transformations in order (multiply is true to chain them)
-      colorFilter.brightness(brightness, true);
-      colorFilter.contrast(contrast, true);
-      colorFilter.hue(hue, true); // hue expects degrees, multiply chains the transformation
+    $effect(() => {
+        if (!image || !canvasContainer) return;
+        
+        let mounted = true;
+        
+        (async () => {
+            try {
+                app = new PIXI.Application();
+                
+                await app.init({
+                    width: canvasContainer.clientWidth,
+                    height: canvasContainer.clientHeight,
+                    backgroundAlpha: 0,
+                    resizeTo: canvasContainer
+                });
+                
+                if (!mounted) {
+                    app.destroy(true);
+                    return;
+                }
+                
+                canvasContainer.appendChild(app.canvas);
+                
+                const texture = await PIXI.Assets.load(image);
+                
+                if (!mounted) {
+                    app.destroy(true);
+                    return;
+                }
+                
+                const scale = Math.min(
+                    app.screen.width / texture.width,
+                    app.screen.height / texture.height
+                );
+                
+                const centerX = app.screen.width / 2;
+                const centerY = app.screen.height / 2;
+                
+                // Original sprite (left side - unfiltered)
+                originalSprite = new PIXI.Sprite(texture);
+                originalSprite.anchor.set(0.5);
+                originalSprite.scale.set(scale);
+                originalSprite.x = centerX;
+                originalSprite.y = centerY;
+                app.stage.addChild(originalSprite);
+                
+                // Filtered sprite (right side - filtered)
+                filteredSprite = new PIXI.Sprite(texture);
+                filteredSprite.anchor.set(0.5);
+                filteredSprite.scale.set(scale);
+                filteredSprite.x = centerX;
+                filteredSprite.y = centerY;
+                
+                // Create color filter
+                colorFilter = new PIXI.ColorMatrixFilter();
+                filteredSprite.filters = [colorFilter];
+                
+                // Create mask for filtered sprite
+                maskGraphics = new PIXI.Graphics();
+                
+                filteredSprite.mask = maskGraphics;
+                app.stage.addChild(maskGraphics);
+                app.stage.addChild(filteredSprite);
+                
+                isInitialized = true;
+                updateMask();
+            } catch (error) {
+                console.error('Error initializing Pixi:', error);
+            }
+        })();
+        
+        return () => {
+            mounted = false;
+            isInitialized = false;
+            
+            if (app) {
+                app.destroy(true);
+                app = null;
+            }
+            
+            originalSprite = null;
+            filteredSprite = null;
+            colorFilter = null;
+            maskGraphics = null;
+        };
+    });
+
+    // Update filters when values change
+    $effect(() => {
+        if (!isInitialized || !colorFilter) return;
+        
+        colorFilter.reset();
+        colorFilter.brightness(filters.brightness / 200, true);
+        colorFilter.contrast(filters.contrast / 100, true);
+        colorFilter.hue(filters.grayscale * 360 / 100, true);
+    });
+
+    // Update mask when split position changes
+    $effect(() => {
+        if (!isInitialized) return;
+        updateMask();
+    });
+
+    function updateMask() {
+        if (!app || !maskGraphics || !isInitialized) return;
+        
+        maskGraphics.clear();
+        
+        const splitX = app.screen.width * splitPosition;
+        
+        maskGraphics.rect(splitX, 0, app.screen.width - splitX, app.screen.height);
+        maskGraphics.fill(0xffffff);
     }
-  });
+
+    const toggleSplit = () => {
+        splitPosition = splitPosition === 0 ? 1 : 0;
+    };
 </script>
 
-<div class="relative flex h-full w-full items-center justify-center overflow-hidden bg-zinc-950">
+<div class="relative flex flex-col h-full w-full items-center justify-center overflow-hidden bg-zinc-950 py-20 px-2">
     {#if image}
-        <!-- Selected Image with real-time CSS filters applied -->
-        <img 
-            src={image} 
-            alt="Editing Preview" 
-            class="max-h-[90%] max-w-[90%] object-contain shadow-2xl transition-all duration-200"
-            style:filter={filterString}
-        />
+        <button
+            class="absolute top-4 left-4 z-10 rounded-full bg-zinc-900/80 px-4 py-2 text-xs font-medium text-white backdrop-blur-md transition-all hover:bg-zinc-800 active:scale-95 border border-white/10"
+            onclick={toggleSplit}
+        >
+            {splitPosition === 0 ? 'Show Filtered' : 'Show Original'}
+        </button>
+        
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-zinc-900/80 backdrop-blur-md rounded-full px-6 py-3 border border-white/10">
+            <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                bind:value={splitPosition}
+                class="w-48"
+            />
+        </div>
+        
+        <div bind:this={canvasContainer} class="w-full h-full"></div>
     {:else}
-        <!-- Placeholder State when no image is selected -->
         <div class="flex flex-col items-center gap-4 text-zinc-600">
             <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">

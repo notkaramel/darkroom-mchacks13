@@ -17,6 +17,8 @@
 	let filters = $state(getDefaultFilters());
 
 	let filteredSprite = $state<PIXI.Sprite | null>(null);
+	let pixiRenderer = $state<PIXI.Renderer | null>(null);
+	let pixiApp = $state<PIXI.Application | null>(null);
 
 	// Handler to update the current image when a user selects one from the SelectionPanel
 	function handleSelectImage(img: string) {
@@ -107,7 +109,7 @@
 		</button>
 
 		<!-- Picture View Component -->
-		<PictureView photoId={currentImage} {filters} bind:filteredSprite />
+		<PictureView photoId={currentImage} {filters} bind:filteredSprite bind:pixiRenderer bind:pixiApp />
 
 		<!-- Floating Toggle Button for Editing (Right) -->
 		<button
@@ -139,7 +141,10 @@
 		style:width={isEditingOpen ? '320px' : '0px'}
 	>
 		<div class="h-full w-[320px]">
-			<EditingPanel bind:filters image={filteredSprite} />
+			<EditingPanel 
+				bind:filters 
+				image={currentImage}
+			/>
 		</div>
 	</div>
 </div>

@@ -1,55 +1,104 @@
 <script lang="ts">
 	import * as PIXI from 'pixi.js';
+	import { PhotoEditFilter } from '$lib/PhotoEditFilter';
+	import type { FilterSettings } from '$lib/storage';
 
-	let { imageData = null }: { imageData: PIXI.Sprite | null } = $props();
+	console.log('Histogram component loaded');
+
+	let { 
+		imageUrl = null,
+		filters
+	}: { 
+		imageUrl: string | null,
+		filters: FilterSettings
+	} = $props();
+
+	console.log('Histogram props:', { imageUrl: imageUrl?.substring(0, 50), filters: !!filters });
 
 	let canvasElement: HTMLCanvasElement;
-	let lastProcessedSprite: PIXI.Sprite | null = null;
 	let histogram = $state<{ red: number[]; green: number[]; blue: number[] }>({
 		red: new Array(256).fill(0),
 		green: new Array(256).fill(0),
 		blue: new Array(256).fill(0)
 	});
 
-	// Calculate histogram from PixiJS Sprite
-	function calculateHistogram(sprite: PIXI.Sprite) {
+	// Calculate histogram from filtered image
+	async function calculateHistogram(url: string, filterSettings: FilterSettings) {
 		try {
-			// Get texture from sprite
-			const texture = sprite.texture;
+			// Create a temporary Pixi app
+			const app = new PIXI.Application();
+			await app.init({ width: 800, height: 600, backgroundAlpha: 0 });
 
-			// Extract pixel data from texture
-			const pixels = texture.source.resource as HTMLImageElement | HTMLCanvasElement;
+			// Load texture
+			const texture = await PIXI.Assets.load(url);
+			const sprite = new PIXI.Sprite(texture);
 
-			// Create temporary canvas to read pixel data
-			const tempCanvas = document.createElement('canvas');
-			tempCanvas.width = texture.width;
-			tempCanvas.height = texture.height;
-			const ctx = tempCanvas.getContext('2d', { willReadFrequently: true });
+			// Create and apply filter
+			const photoFilter = new PhotoEditFilter();
+			
+			// Apply all filter settings
+			const { basic, color, hsl, lens_corrections, transform } = filterSettings;
+			
+			// Basic
+			photoFilter.brightness = basic.brightness / 200;
+			photoFilter.contrast = basic.contrast / 100;
+			photoFilter.highlights = basic.highlight / 333;
+			photoFilter.shadows = basic.shadow / 333;
+			
+			// Color
+			photoFilter.temperature = color.temperature / 100;
+			photoFilter.tint = color.tint / 100;
+			photoFilter.saturation = color.saturation / 100;
+			photoFilter.vibrance = color.vibrance / 200;
+			
+			// HSL
+			photoFilter.setRedHSL(hsl.red.hue / 200, hsl.red.saturation / 100, hsl.red.luminance / 333);
+			photoFilter.setOrangeHSL(hsl.orange.hue / 200, hsl.orange.saturation / 100, hsl.orange.luminance / 333);
+			photoFilter.setYellowHSL(hsl.yellow.hue / 200, hsl.yellow.saturation / 100, hsl.yellow.luminance / 333);
+			photoFilter.setGreenHSL(hsl.green.hue / 200, hsl.green.saturation / 100, hsl.green.luminance / 333);
+			photoFilter.setCyanHSL(hsl.cyan.hue / 200, hsl.cyan.saturation / 100, hsl.cyan.luminance / 333);
+			photoFilter.setBlueHSL(hsl.blue.hue / 200, hsl.blue.saturation / 100, hsl.blue.luminance / 333);
+			photoFilter.setPurpleHSL(hsl.purple.hue / 200, hsl.purple.saturation / 100, hsl.purple.luminance / 333);
+			photoFilter.setMagentaHSL(hsl.magenta.hue / 200, hsl.magenta.saturation / 100, hsl.magenta.luminance / 333);
+			
+			// Lens corrections
+			photoFilter.distortion = lens_corrections.distortion / 100;
+			photoFilter.chromaticAberration = lens_corrections.chromatic_aberration / 100;
+			photoFilter.vignetting = lens_corrections.vignetting / 100;
+			
+			// Transform
+			photoFilter.rotation = transform.rotate;
+			photoFilter.vertical = transform.vertical;
+			photoFilter.horizontal = transform.horizontal;
+			photoFilter.perspective = transform.perspective / 100;
+			
+			sprite.filters = [photoFilter];
+			app.stage.addChild(sprite);
 
-			if (!ctx) return;
+			// Render
+			app.renderer.render(app.stage);
 
-			// Draw texture to temp canvas
-			ctx.drawImage(pixels, 0, 0);
-
-			// Get pixel data
-			const imgData = ctx.getImageData(0, 0, texture.width, texture.height);
-			const pixelData = imgData.data;
+			// Extract pixels
+			const extractResult = app.renderer.extract.pixels(sprite);
+			const pixels = extractResult.pixels;
 
 			// Reset histogram arrays
 			const red = new Array(256).fill(0);
 			const green = new Array(256).fill(0);
 			const blue = new Array(256).fill(0);
 
-			// Count pixel values (RGBA format, so step by 4)
-			for (let i = 0; i < pixelData.length; i += 4) {
-				red[pixelData[i]]++;
-				green[pixelData[i + 1]]++;
-				blue[pixelData[i + 2]]++;
+			// Count pixel values (RGBA format, step by 4)
+			for (let i = 0; i < pixels.length; i += 4) {
+				red[pixels[i]]++;
+				green[pixels[i + 1]]++;
+				blue[pixels[i + 2]]++;
 			}
 
 			// Update histogram
 			histogram = { red, green, blue };
-			lastProcessedSprite = sprite;
+
+			// Clean up
+			app.destroy(true);
 		} catch (error) {
 			console.error('Failed to calculate histogram:', error);
 		}
@@ -69,7 +118,7 @@
 		ctx.fillStyle = '#18181b'; // zinc-900
 		ctx.fillRect(0, 0, width, height);
 
-		// Find max value for scaling
+		// Find the actual maximum value across all channels
 		const maxRed = Math.max(...histogram.red);
 		const maxGreen = Math.max(...histogram.green);
 		const maxBlue = Math.max(...histogram.blue);
@@ -77,45 +126,63 @@
 
 		if (maxValue === 0) return;
 
-		// Draw histograms with transparency for overlay effect
+		// Draw RGB histograms with transparency for overlay effect
 		const barWidth = width / 256;
 
+		// Helper function for logarithmic scaling
+		const logScale = (value: number, max: number) => {
+			if (value === 0) return 0;
+			// Use log scale to make small values more visible
+			return Math.log(value + 1) / Math.log(max + 1);
+		};
+
 		// Draw red channel
-		ctx.globalAlpha = 0.5;
+		ctx.globalAlpha = 0.6;
 		ctx.fillStyle = '#ef4444'; // red-500
 		for (let i = 0; i < 256; i++) {
-			const barHeight = (histogram.red[i] / maxRed) * height;
+			const barHeight = logScale(histogram.red[i], maxRed) * height;
 			ctx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
 		}
 
 		// Draw green channel
 		ctx.fillStyle = '#22c55e'; // green-500
 		for (let i = 0; i < 256; i++) {
-			const barHeight = (histogram.green[i] / maxGreen) * height;
+			const barHeight = logScale(histogram.green[i], maxGreen) * height;
 			ctx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
 		}
 
 		// Draw blue channel
 		ctx.fillStyle = '#3b82f6'; // blue-500
 		for (let i = 0; i < 256; i++) {
-			const barHeight = (histogram.blue[i] / maxBlue) * height;
+			const barHeight = logScale(histogram.blue[i], maxBlue) * height;
 			ctx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
 		}
 
 		ctx.globalAlpha = 1.0;
 	}
 
-	// Update histogram when imageData changes (but only if it's different)
+	// Update histogram when image URL or filters change
 	$effect(() => {
-		if (imageData && canvasElement) {
-			calculateHistogram(imageData);
-		}
-	});
-
-	// Draw histogram when histogram data changes
-	$effect(() => {
-		if (histogram && canvasElement) {
-			drawHistogram();
+		// Track filters deeply by converting to JSON
+		const filterString = filters ? JSON.stringify(filters) : '';
+		
+		console.log('Histogram effect running:', { 
+			imageUrl: imageUrl?.substring(0, 50), 
+			canvasElement: !!canvasElement, 
+			filters: !!filters,
+			filterHash: filterString.substring(0, 50)
+		});
+		
+		if (imageUrl && canvasElement && filters) {
+			console.log('Starting histogram calculation...');
+			calculateHistogram(imageUrl, filters).then(() => {
+				console.log('Histogram calculated, drawing...');
+				drawHistogram();
+			}).catch(err => {
+				console.error('Histogram calculation failed:', err);
+			});
+		} else {
+			console.log('Missing requirements:', { imageUrl: !!imageUrl, canvasElement: !!canvasElement, filters: !!filters });
 		}
 	});
 </script>
